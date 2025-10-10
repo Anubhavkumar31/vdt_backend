@@ -147,5 +147,6 @@ cython_debug/
 #/data_backend/Charts
 #/utils
 
-
+/utils/Authorization.json
+/utils/GCS_Auth
 
