@@ -142,10 +142,11 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-/Reports
-/logs
-/data_backend/Charts
-/utils
+#/Reports
+#/logs
+#/data_backend/Charts
+#/utils
 
-
+/utils/Authorization.json
+/utils/GCS_Auth
 
