@@ -4539,7 +4539,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
 
                    # model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/models WT5.5new_model.pkl'
                    #  model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/rf_width_model.pkl'
-                    model_path = 'D:\Anubhav\GMFL_12_Inch_Desktop\ML_MODEL_PKL\rf_width_model.pkl'
+                    model_path = r'D:\Anubhav\vdt_backend\GMFL_12_Inch_Desktop\models WT5.5\ML_MODEL_PKL\rf_width_model.pkl'
                     model = joblib.load(model_path)  # ✅ Load actual model object
                     model_width(model, output_dir)
 
