@@ -73,7 +73,7 @@ class WatermarkWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setStyleSheet("background-color: #f2f2f2;")  # grey background
-        self.watermark = QtGui.QPixmap("C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/utils/Picture1.png")  # apne image ka path daalo
+        self.watermark = QtGui.QPixmap(r"F:\work_new\backend_software\GMFL_12_Inch_Desktop\utils\Picture1.png")  # apne image ka path daalo
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
@@ -4526,20 +4526,23 @@ class Ui_MainWindow(QtWidgets.QWidget):
                                 Min_Val, Max_Val)
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
+                            try:
+                                cursor.execute(query_defect_insert, (
+                                    int(runid), start_index, end_index, start_sensor, end_sensor, absolute_distance,
+                                    upstream,
+                                    length, length_percent, Width, width_new, width_new2,
+                                    depth, depth_old, orientation, defect_type, dimension_classification,
+                                    start_oddo1, end_oddo1, speed, min_value, max_value
+                                ))
 
-                            cursor.execute(query_defect_insert, (
-                                int(runid), start_index, end_index, start_sensor, end_sensor, absolute_distance,
-                                upstream,
-                                length, length_percent, Width, width_new, width_new2,
-                                depth, depth_old, orientation, defect_type, dimension_classification,
-                                start_oddo1, end_oddo1, speed, min_value, max_value
-                            ))
-
-                            connection.commit()
+                                connection.commit()
+                            except Exception as e:
+                                print(f"error inseting data: {e}")
 
                    # model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/models WT5.5new_model.pkl'
                    #  model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/rf_width_model.pkl'
-                    model_path = r'D:\Anubhav\vdt_backend\GMFL_12_Inch_Desktop\models WT5.5\ML_MODEL_PKL\rf_width_model.pkl'
+                    model_path = r'F:\work_new\backend_software\GMFL_12_Inch_Desktop\models WT5.5\ML_MODEL_PKL\rf_width_model.pkl'
+
                     model = joblib.load(model_path)  # ✅ Load actual model object
                     model_width(model, output_dir)
 

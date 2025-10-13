@@ -148,5 +148,15 @@ cython_debug/
 #/utils
 
 /utils/Authorization.json
-/utils/GCS_Auth
+/utils/GCS_Auth.json
 
+/charts
+/DataFrames1
+/heatmap_new.html
+/ptt-22-01-2025(6)
+/venv38
+
+
+
+.idea/
+.vscode/

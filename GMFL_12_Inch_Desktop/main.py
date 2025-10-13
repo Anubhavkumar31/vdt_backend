@@ -1,3 +1,5 @@
+import atexit; atexit.register(lambda: print('>>> Exiting main.py normally'))
+
 import os
 import re
 import math
@@ -8552,3 +8554,23 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
+    # app.exec_()
+
+
+
+# if __name__ == "__main__":
+#     print("✅ Entering main GUI loop...")
+#     window = QtWidgets.QMainWindow()
+#     window.setWindowTitle("GMFL 12-Inch Desktop")
+#     window.resize(800, 600)
+#     label = QLabel("GUI started successfully!", alignment=Qt.AlignCenter)
+#     window.setCentralWidget(label)
+#     window.show()
+#
+#     # Run the app loop
+#     exit_code = app.exec_()
+#     print("✅ Exited event loop, exit code =", exit_code)
+
+
+
+

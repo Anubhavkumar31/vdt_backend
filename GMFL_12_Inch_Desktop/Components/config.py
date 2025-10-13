@@ -12,7 +12,7 @@ from google.cloud import bigquery
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 xyz = QWebEngineView
 no_weld_indicator = False
-connection = pymysql.connect(host='localhost', user='root', password='byy184', db='gmfldesktop12')
+connection = pymysql.connect(host='localhost', user='root', password='anubhav', db='gmfldesktop12')
 credentials = service_account.Credentials.from_service_account_file('./utils/Authorization.json')
 storage_client = storage.Client.from_service_account_json('./utils/GCS_Auth.json')
 sensor_values = json.loads(open('./utils/sensor_value_update.json').read())
@@ -23,7 +23,7 @@ source_table_id = 'Main_12_copy_x14'
 project_id = 'quantum-theme-334609'
 table_name = project_id + '.'+source_dataset_id + '.'+source_table_id
 
-"""
+"""     
 Reference value will be consider 
 """
 oddo1 = 1205.894
@@ -62,8 +62,9 @@ client = bigquery.Client(credentials=credentials, project=project_id)
 shared_dataset_ref = client.get_dataset(source_dataset_id)
 print(shared_dataset_ref)
 app = QtWidgets.QApplication([])
+print("generated app ")
 msg = QMessageBox()
-
+print("mssage box created ")
 
 def error_msg(Title, Description):
     """
