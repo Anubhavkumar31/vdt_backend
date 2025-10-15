@@ -1,5 +1,3 @@
-import atexit; atexit.register(lambda: print('>>> Exiting main.py normally'))
-
 import os
 import re
 import math
@@ -25,24 +23,31 @@ from scipy.signal import savgol_filter, lfilter
 from sklearn.preprocessing import MinMaxScaler
 import pymysql
 from PyQt5.QtCore import Qt, QUrl
-import sys
 #import WeldAndPipeLength
 from extras import weld_update
+
 from google.cloud import bigquery
 import pandas as pd
-from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
+from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets, QtGui
+
 from PyQt5.QtWidgets import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
+
 import GMFL_12_Inch_Desktop.Tabs.update_tab_1.widgets.update_form as formComponent
 import Components.graph as graph
-import Components.style as Style
+import Components.style1 as Style
 # import Components.logger as logger
 import Components.config as Config
 import Components.CreateProject as CreateProject
 import Components.endcounter_to_startcounter_distance as endcounter_to_startcounter_distance
 import Components.AddWeld as AddWeld
+from main_gui import GraphApp
+from GMFL_12_Inch_Desktop.Tabs.Data_table_tab_3.tab_ShowData import TabShowData
+from GMFL_12_Inch_Desktop.Tabs.update_tab_1.tab_update import UpdateTab
+from pathlib import Path
+
 # import Components.report_generator as Report
 import warnings
 warnings.filterwarnings('ignore')
@@ -57,8 +62,19 @@ company_list = []  # list of companies
 credentials = Config.credentials
 project_id = Config.project_id
 client = bigquery.Client(credentials=credentials, project=project_id)
-config = json.loads(open('./utils/proximity_base_value.json').read())
+config = json.loads(open(r'D:\Anubhav\vdt_backend\GMFL_12_Inch_Desktop\utils\proximity_base_value.json').read())
 temp_defect = []
+
+# Dynamically locate the GMFL root (2 levels above this file)
+GMFL_ROOT = Path(__file__).resolve().parents[1]
+
+
+def gmfl_path(relative):
+    """Return absolute path inside GMFL backend_data/temp folder."""
+    temp_dir = GMFL_ROOT / "backend_data" / "data_generated" / "temp"
+    os.makedirs(temp_dir, exist_ok=True)  # make sure folder exists
+    return str(temp_dir / relative)
+
 
 def func(a):
     print(a)
@@ -67,15 +83,37 @@ def func(a):
     l1 = query_job.result().to_dataframe()
     return l1
 
+class WatermarkWidget(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("background-color: #f2f2f2;")  # grey background
+        self.watermark = QtGui.QPixmap(r"F:\work_new\backend_software\GMFL_12_Inch_Desktop\utils\Picture1.png")  # apne image ka path daalo
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setOpacity(0.08)  # transparency (adjust karo)
+
+        # Center me watermark draw karo
+        x = (self.width() - self.watermark.width()) / 2
+        y = (self.height() - self.watermark.height()) / 2
+        painter.drawPixmap(int(x), int(y), self.watermark)
+
+
 class Ui_MainWindow(QtWidgets.QWidget):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1700, 820)
         MainWindow.showMaximized()
 
+
         self.count = 0
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
+        self.centralwidget.setStyleSheet("background-color: #EDF6FF;")  # Light sky blue tone
+
+        # This MUST be called after styling to apply background
+        MainWindow.setCentralWidget(self.centralwidget)
+
 
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.CustomizeWindowHint)
         self.label_animation = QLabel(self)
@@ -85,7 +123,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         Left Main GridLayout
         """
         self.gridLayoutWidget = QtWidgets.QWidget(self.centralwidget)
-        self.gridLayoutWidget.setGeometry(QtCore.QRect(0, 0, 190, 1200))
+        self.gridLayoutWidget.setGeometry(QtCore.QRect(0, 0, 300, 1200))
         self.gridLayoutWidget.adjustSize()
 
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
@@ -108,12 +146,13 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.left_listWidget = QtWidgets.QListWidget(self.gridLayoutWidget)
         self.left_listWidget.setObjectName("left_listWidget")
 
+
         """
         Call the list_clicked function
         """
         self.left_listWidget.itemDoubleClicked.connect(self.list_clicked)
         self.left_listWidget.itemClicked.connect(self.get_project_name)
-        self.main_left.addWidget(self.left_listWidget, 2, 0, 1, 1)
+        self.main_left.addWidget(self.left_listWidget, 1, 0, 1, 1)
         self.add_to_list()
 
         """
@@ -206,7 +245,8 @@ class Ui_MainWindow(QtWidgets.QWidget):
 
 
     def init_gridLayoutWidget_2(self):
-        self.gridLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
+        # self.gridLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
+        self.gridLayoutWidget_2 = WatermarkWidget(self.centralwidget)
         self.gridLayoutWidget_2.setGeometry(QtCore.QRect(100, 0, 1920, 800))
         self.gridLayoutWidget_2.setObjectName("gridLayoutWidget_2")
         self.main_right = QtWidgets.QGridLayout(self.gridLayoutWidget_2)
@@ -214,10 +254,22 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.main_right.setObjectName("main_right")
 
 
+    # def _init_back_button(self):
+    #     self.go_back_button = QtWidgets.QPushButton(self.gridLayoutWidget_2)
+    #     self.go_back_button.setStyleSheet(Style.btn_type_primary)
+    #     self.go_back_button.setText("Go Back")
+    #     self.main_right.addWidget(self.go_back_button, 2, 0)
+    #     self.go_back_button.clicked.connect(self.reset_default_screen)
+
     def _init_back_button(self):
-        self.go_back_button = QtWidgets.QPushButton(self.gridLayoutWidget_2)
-        self.go_back_button.setStyleSheet(Style.btn_type_primary)
-        self.go_back_button.setText("Go Back")
+        self.go_back_button = QtWidgets.QPushButton("⟵ Go Back", self.gridLayoutWidget_2)
+        self.go_back_button.setStyleSheet(Style.btn_back)
+        self.go_back_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.go_back_button.setToolTip("Return to the previous screen")
+        self.go_back_button.setAccessibleName("Go Back Button")
+        self.go_back_button.setMinimumHeight(40)
+        self.go_back_button.setFont(QtGui.QFont("Segoe UI", 10, QtGui.QFont.Bold))
+
         self.main_right.addWidget(self.go_back_button, 2, 0)
         self.go_back_button.clicked.connect(self.reset_default_screen)
 
@@ -228,42 +280,52 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.right_tabWidget = QtWidgets.QTabWidget(self.gridLayoutWidget_2)
         self.right_tabWidget.setObjectName("right_tabWidget")
 
-        self.tab_update = QtWidgets.QWidget()
-        self.tab_update.setObjectName("tab")
-
-        """
-        Call the function init_update_form
-        """
-        self.tab_update.layout = QtWidgets.QVBoxLayout(self.tab_update)
-        self.tab_update.setStyleSheet(Style.tab_update)
-        Update_form_component._init_form_layout(self.tab_update, self.tab_update.layout)
+        # self.tab_update = QtWidgets.QWidget()
+        # self.tab_update.setObjectName("tab")
+        #
+        # """
+        # Call the function init_update_form
+        # """
+        # self.tab_update.layout = QtWidgets.QVBoxLayout(self.tab_update)
+        # self.tab_update.setStyleSheet(Style.tab_update)
+        # Update_form_component._init_form_layout(self.tab_update, self.tab_update.layout)
 
         """
         Right tabwidget add tab,tab_2,tab_3,tab_4,tab_5
         """
+        self.tab_update = UpdateTab(self)
         self.right_tabWidget.addTab(self.tab_update, "")
-        self.right_tabWidget.setStyleSheet(Style.right_tabWidget)
+        self.right_tabWidget.setStyleSheet(Style.tab_bar_style)
 
         self.tab_weld_selection = QtWidgets.QWidget()
         self.tab_weld_selection.setObjectName("tab_2")
+        self.tab_weld_selection.setStyleSheet("background-color: #EDF6FF;")
 
-        self.tab_showData = QtWidgets.QWidget()
-        self.tab_showData.setObjectName("tab_3")
+        # self.tab_showData = QtWidgets.QWidget()
+        # self.tab_showData.setObjectName("tab_3")
+        # self.tab_showData.setStyleSheet("background-color: #EDF6FF;")
+
 
         self.tab_line1 = QtWidgets.QWidget()
         self.tab_line1.setObjectName("tab_4")
+        self.tab_line1.setStyleSheet("background-color: #EDF6FF;")
 
         self.tab_line_orientation = QtWidgets.QWidget()
         self.tab_line_orientation.setObjectName("tab_5")
+        self.tab_line_orientation.setStyleSheet("background-color: #EDF6FF;")
 
         self.tab_visualize = QtWidgets.QWidget()
         self.tab_visualize.setObjectName("tab_6")
+        self.tab_visualize.setStyleSheet("background-color: #EDF6FF;")
 
         self.continue_heatmap_tab = QtWidgets.QWidget()
         self.continue_heatmap_tab.setObjectName("tab_7")
+        self.continue_heatmap_tab.setStyleSheet("background-color: #EDF6FF;")
 
         self.Graph1 = QtWidgets.QWidget()
         self.Graph1.setObjectName("tab_8")
+        self.Graph1.setStyleSheet("background-color: #EDF6FF;")
+
 
         self.tab_Pipe = QtWidgets.QWidget()
         self.tab_Pipe.setObjectName("tab_9")
@@ -296,6 +358,8 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.hbox_15.addWidget(self.start15)
         self.hbox_15.addWidget(self.end15)
         self.button_x15.clicked.connect(self.weld_selection)
+
+
         self.button_x15.setStyleSheet(Style.btn_type_primary)
         self.hbox_15.addWidget(self.button_x15)
         self.hbox_16.addWidget(self.canvas_x15)
@@ -308,102 +372,102 @@ class Ui_MainWindow(QtWidgets.QWidget):
         Start from here third tab content for create_weld
         Table Widget within the third tab for create_weld information
         """
-        self.tab_showData.layout = QtWidgets.QVBoxLayout()
-        self.myTableWidget = QtWidgets.QTableWidget()
+        # # self.tab_showData.layout = QtWidgets.QVBoxLayout()
+        # self.myTableWidget = QtWidgets.QTableWidget()
+        #
+        # self.myTableWidget.setGeometry(QtCore.QRect(30, 30, 1000, 170))
+        #
+        # self.myTableWidget.setRowCount(7)
+        # self.myTableWidget.setColumnCount(11)
+        # self.myTableWidget.setColumnWidth(0, 140)
+        # self.myTableWidget.setColumnWidth(1, 140)
+        # self.myTableWidget.setColumnWidth(2, 140)
+        # self.myTableWidget.setColumnWidth(3, 140)
+        # self.myTableWidget.setColumnWidth(4, 140)
+        # self.myTableWidget.setColumnWidth(5, 140)
+        # self.myTableWidget.setColumnWidth(6, 140)
+        # self.myTableWidget.setColumnWidth(7, 140)
+        # self.myTableWidget.setColumnWidth(8, 140)
+        # self.myTableWidget.setColumnWidth(9, 140)
+        # self.myTableWidget.setColumnWidth(10, 140)
+        # self.myTableWidget.horizontalHeader().setStretchLastSection(True)
+        #
+        # self.myTableWidget.setHorizontalHeaderLabels(
+        #     ['weld_number', 'runid', 'analytic_id', 'sensitivity', 'length',
+        #      'start_index', 'end_index', 'start_oddo1', 'end_oddo1', 'start_oddo2', 'end_oddo2'])
+        # self.myTableWidget.doubleClicked.connect(self.viewClicked)
+        # self.myTableWidget.setSelectionBehavior(QTableView.SelectRows)
 
-        self.myTableWidget.setGeometry(QtCore.QRect(30, 30, 1000, 170))
+        # """
+        # Weld button located inside the third tab
+        # """
+        # self.ShowWeld = QtWidgets.QPushButton()
+        # self.ShowWeld.setGeometry(QtCore.QRect(690, 265, 160, 43))
+        # self.ShowWeld.setObjectName("Fetch Data")
+        # self.ShowWeld.setText("Fetch Weld Details")
+        # """
+        # Call the function show_weld
+        # """
+        # self.ShowWeld.clicked.connect(self.Show_Weld)
+        # self.ShowWeld.setStyleSheet(Style.btn_type_primary)
 
-        self.myTableWidget.setRowCount(7)
-        self.myTableWidget.setColumnCount(11)
-        self.myTableWidget.setColumnWidth(0, 140)
-        self.myTableWidget.setColumnWidth(1, 140)
-        self.myTableWidget.setColumnWidth(2, 140)
-        self.myTableWidget.setColumnWidth(3, 140)
-        self.myTableWidget.setColumnWidth(4, 140)
-        self.myTableWidget.setColumnWidth(5, 140)
-        self.myTableWidget.setColumnWidth(6, 140)
-        self.myTableWidget.setColumnWidth(7, 140)
-        self.myTableWidget.setColumnWidth(8, 140)
-        self.myTableWidget.setColumnWidth(9, 140)
-        self.myTableWidget.setColumnWidth(10, 140)
-        self.myTableWidget.horizontalHeader().setStretchLastSection(True)
-
-        self.myTableWidget.setHorizontalHeaderLabels(
-            ['weld_number', 'runid', 'analytic_id', 'sensitivity', 'length',
-             'start_index', 'end_index', 'start_oddo1', 'end_oddo1', 'start_oddo2', 'end_oddo2'])
-        self.myTableWidget.doubleClicked.connect(self.viewClicked)
-        self.myTableWidget.setSelectionBehavior(QTableView.SelectRows)
-
-        """
-        Weld button located inside the third tab
-        """
-        self.ShowWeld = QtWidgets.QPushButton()
-        self.ShowWeld.setGeometry(QtCore.QRect(690, 265, 160, 43))
-        self.ShowWeld.setObjectName("Fetch Data")
-        self.ShowWeld.setText("Fetch Weld Details")
-        """
-        Call the function show_weld
-        """
-        self.ShowWeld.clicked.connect(self.Show_Weld)
-        self.ShowWeld.setStyleSheet(Style.btn_type_primary)
-
-        """
-        Create Weld button located inside the third tab
-        """
-
-        self.create_weld = QtWidgets.QPushButton()
-        self.create_weld.setGeometry(QtCore.QRect(480, 265, 180, 43))
-        self.create_weld.setObjectName("Create Weld Data")
-        self.create_weld.setText("Create Weld and Pipe")
-
-        """
-        Call the function CreateWeld
-        """
-        self.create_weld.clicked.connect(self.CreateWeld)
-        self.create_weld.setStyleSheet(Style.btn_type_primary)
+        # """
+        # Create Weld button located inside the third tab
+        # """
+        #
+        # self.create_weld = QtWidgets.QPushButton()
+        # self.create_weld.setGeometry(QtCore.QRect(480, 265, 180, 43))
+        # self.create_weld.setObjectName("Create Weld Data")
+        # self.create_weld.setText("Create Weld and Pipe")
+        #
+        # """
+        # Call the function CreateWeld
+        # """
+        # self.create_weld.clicked.connect(self.CreateWeld)
+        # self.create_weld.setStyleSheet(Style.btn_type_primary)
 
         """
         Third tab end here
         """
 
+        #
+        # """
+        # Here the Third content for the Weld_to_Pipe
+        # """
+        # """
+        # Table widget located within the third tab for weld_to_pipe information
+        # """
+        #
+        # self.myTableWidget1 = QtWidgets.QTableWidget()
+        # self.myTableWidget1.setGeometry(QtCore.QRect(30, 310, 1300, 235))
+        # self.myTableWidget1.setRowCount(7)
+        # self.myTableWidget1.setColumnCount(8)
+        # self.myTableWidget1.setColumnWidth(0, 160)
+        # self.myTableWidget1.setColumnWidth(1, 160)
+        # self.myTableWidget1.setColumnWidth(2, 160)
+        # self.myTableWidget1.setColumnWidth(3, 160)
+        # self.myTableWidget1.setColumnWidth(4, 160)
+        # self.myTableWidget1.setColumnWidth(5, 160)
+        # self.myTableWidget1.setColumnWidth(6, 160)
+        # self.myTableWidget1.setColumnWidth(7, 160)
+        # self.myTableWidget1.horizontalHeader().setStretchLastSection(True)
+        # self.myTableWidget1.setHorizontalHeaderLabels(
+        #     ['pipe_id', 'runid', 'analytic_id', 'lower_sensitivity', 'upper_sensitivity', 'length', 'start_index',
+        #      'end_index'])
 
-        """
-        Here the Third content for the Weld_to_Pipe
-        """
-        """
-        Table widget located within the third tab for weld_to_pipe information
-        """
-
-        self.myTableWidget1 = QtWidgets.QTableWidget()
-        self.myTableWidget1.setGeometry(QtCore.QRect(30, 310, 1300, 235))
-        self.myTableWidget1.setRowCount(7)
-        self.myTableWidget1.setColumnCount(8)
-        self.myTableWidget1.setColumnWidth(0, 160)
-        self.myTableWidget1.setColumnWidth(1, 160)
-        self.myTableWidget1.setColumnWidth(2, 160)
-        self.myTableWidget1.setColumnWidth(3, 160)
-        self.myTableWidget1.setColumnWidth(4, 160)
-        self.myTableWidget1.setColumnWidth(5, 160)
-        self.myTableWidget1.setColumnWidth(6, 160)
-        self.myTableWidget1.setColumnWidth(7, 160)
-        self.myTableWidget1.horizontalHeader().setStretchLastSection(True)
-        self.myTableWidget1.setHorizontalHeaderLabels(
-            ['pipe_id', 'runid', 'analytic_id', 'lower_sensitivity', 'upper_sensitivity', 'length', 'start_index',
-             'end_index'])
-
-        """
-        Show weld to pipe button within the third tab
-        """
-        self.Show_Weld_to_Pipe = QtWidgets.QPushButton()
-        self.Show_Weld_to_Pipe.setGeometry(QtCore.QRect(600, 550, 160, 43))
-        self.Show_Weld_to_Pipe.setObjectName("Fetch Data")
-        self.Show_Weld_to_Pipe.setText("Fetch Weld To Pipe")
-
-        """
-        Call the function Show Weld to Pipe
-        """
-        self.Show_Weld_to_Pipe.clicked.connect(self.ShowWeldToPipe)
-        self.Show_Weld_to_Pipe.setStyleSheet(Style.btn_type_primary)
+        # """
+        # Show weld to pipe button within the third tab
+        # """
+        # self.Show_Weld_to_Pipe = QtWidgets.QPushButton()
+        # self.Show_Weld_to_Pipe.setGeometry(QtCore.QRect(600, 550, 160, 43))
+        # self.Show_Weld_to_Pipe.setObjectName("Fetch Data")
+        # self.Show_Weld_to_Pipe.setText("Fetch Weld To Pipe")
+        #
+        # """
+        # Call the function Show Weld to Pipe
+        # """
+        # self.Show_Weld_to_Pipe.clicked.connect(self.ShowWeldToPipe)
+        # self.Show_Weld_to_Pipe.setStyleSheet(Style.btn_type_primary)
 
         """
         Table widget within the third tab for defect list information
@@ -441,14 +505,14 @@ class Ui_MainWindow(QtWidgets.QWidget):
         """
         self.Show_Defect_list.clicked.connect(self.DefectList)
         self.Show_Defect_list.setStyleSheet(Style.btn_type_primary)
-        self.tab_showData.layout.addWidget(self.myTableWidget)
-        self.tab_showData.layout.addWidget(self.ShowWeld)
-        self.tab_showData.layout.addWidget(self.create_weld)
-        self.tab_showData.layout.addWidget(self.myTableWidget1)
-        self.tab_showData.layout.addWidget(self.Show_Weld_to_Pipe)
-        self.tab_showData.layout.addWidget(self.myTableWidget2)
-        self.tab_showData.layout.addWidget(self.Show_Defect_list)
-        self.tab_showData.setLayout(self.tab_showData.layout)
+        # self.tab_showData.layout.addWidget(self.myTableWidget)
+        # self.tab_showData.layout.addWidget(self.ShowWeld)
+        # self.tab_showData.layout.addWidget(self.create_weld)
+        # self.tab_showData.layout.addWidget(self.myTableWidget1)
+        # self.tab_showData.layout.addWidget(self.Show_Weld_to_Pipe)
+        # self.tab_showData.layout.addWidget(self.myTableWidget2)
+        # self.tab_showData.layout.addWidget(self.Show_Defect_list)
+        # self.tab_showData.setLayout(self.tab_showData.layout)
 
         """
         Line Plotting Within the fourth tab
@@ -467,6 +531,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.reset_btn = QtWidgets.QPushButton('Reset')
         self.reset_btn.clicked.connect(self.reset_btn_fun)
 
+
         self.latitude = QtWidgets.QLineEdit()
         self.latitude.setFixedWidth(100)
         self.logitude = QtWidgets.QLineEdit()
@@ -476,9 +541,11 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.selection_mark_lat_long.setText("Mark Lat Long")
         self.selection_mark_lat_long.clicked.connect(self.mark_lat_long)
 
+
         self.selection_mark_base_value = QtWidgets.QPushButton()
         self.selection_mark_base_value.setText("Mark Base Value")
         self.selection_mark_base_value.clicked.connect(self.basevalue)
+
 
         self.feature_selection = QtWidgets.QPushButton()
         self.feature_selection.setText("Mark Feature")
@@ -489,6 +556,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
 
         self.button_x5 = QtWidgets.QPushButton('Line Chart')
         self.button_x5.clicked.connect(self.Line_chart1)
+
         # self.button_x5.setStyleSheet(Style.btn_type_primary)
         self.button_x5.resize(50, 50)
 
@@ -496,9 +564,11 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.next_btn_lc.setStyleSheet("background-color: white; color: black;")
         self.next_btn_lc.clicked.connect(self.Line_chart1_next)
 
+
         self.prev_btn_lc = QtWidgets.QPushButton('Previous')
         self.prev_btn_lc.setStyleSheet("background-color: white; color: black;")
         self.prev_btn_lc.clicked.connect(self.Line_chart1_previous)
+
 
         button_layout = QtWidgets.QHBoxLayout()
         button_layout.addWidget(self.prev_btn_lc)
@@ -908,6 +978,10 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.button_x5_slgraph.resize(50, 50)
         self.button_x5_slgraph.clicked.connect(self.Sensor_loss)
 
+        self.button_x5_dfgraph = QtWidgets.QPushButton('Graph Records')
+        self.button_x5_dfgraph.resize(50, 50)
+        self.button_x5_dfgraph.clicked.connect(self.Graph_app)
+
         self.hb_graph.addLayout(self.vb_graph, 75)
 
         self.hbox_5_graph = QtWidgets.QHBoxLayout()
@@ -922,8 +996,10 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.hbox_5_graph.addWidget(self.combo_graph)
         self.hbox_5_graph.addWidget(self.button_x5_mgraph)
         self.hbox_5_graph.addWidget(self.button_x5_vgraph)
+
         self.hbox_5_graph.addWidget(self.button_x5_slgraph)
         # self.hbox_5_graph.addWidget(self.button_x5_tgraph)
+        self.hbox_5_graph.addWidget(self.button_x5_dfgraph)
 
         self.hbox_6_graph.addWidget(self.m_output_graph)
 
@@ -978,7 +1054,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         """
  ------->End from here Nine tab ()
         """
-
+        self.tab_showData = TabShowData(self)
         self.right_tabWidget.addTab(self.tab_weld_selection, "")
         self.right_tabWidget.addTab(self.tab_showData, "")
         self.right_tabWidget.addTab(self.tab_line1, "")
@@ -1004,17 +1080,41 @@ class Ui_MainWindow(QtWidgets.QWidget):
         """
         Right Tab Widget set tab text
         """
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_update), "Update")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_weld_selection), "Weld Selection")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_showData), "Table Data Show")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line1), "Line Plot (Counter v/s Sensor)")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line_orientation), "Line Plot(Absolute v/s Orienatation)")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_visualize), "Pipe Visualization (Heatmap)")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.continue_heatmap_tab), "Heatmap(Absolute v/s Orienatation)")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.Graph1), "Graph")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_update), "Update")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_weld_selection), "Weld Selection")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_showData), "Table Data Show")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line1), "Line Plot (Counter v/s Sensor)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line_orientation), "Line Plot(Absolute v/s Orienatation)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_visualize), "Pipe Visualization (Heatmap)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.continue_heatmap_tab), "Heatmap(Absolute v/s Orienatation)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.Graph1), "Graph")
         # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_Pipe), "Feature Selection")
         # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_Analysis), "Data Analysis")
 
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_update), "Update")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_weld_selection), "Weld Selection")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_showData), "Data Table")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line1), "Line Plot(Counter vs Sensor)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line_orientation),
+        #                                 "Line Plot(Absolute vs Orientation)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_visualize),
+        #                                 "Pipe Visualization (Heatmap)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.continue_heatmap_tab),
+        #                                 "Heatmap(Absolute vs Orientation)")
+        # self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.Graph1), "Graph")
+
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_update), "🔄 Update")
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_weld_selection), "⚙️ Weld Selection")
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_showData), "📊 Data Table")
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line1),
+                                        "📈Line Plot(Counter vs Sensor)")
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line_orientation),
+                                        "Line Plot(Absolute vs Orientation)")
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_visualize),
+                                        "🌐Pipe Visualization(Heatmap)")
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.continue_heatmap_tab),
+                                        "Heatmap(Absolute vs Orientation)")
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.Graph1), "📉 Graph")
 
     """
 ----->Weld Selection tab(2) all functions starts from here
@@ -1549,8 +1649,10 @@ class Ui_MainWindow(QtWidgets.QWidget):
             showarrow=False,
         )
 
-        pio.write_html(fig, file='h_line_chart_proxi.html', auto_open=False)
-        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "h_line_chart_proxi.html"))
+        # pio.write_html(fig, file='../h_line_chart_proxi.html', auto_open=False)
+        # file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../h_line_chart_proxi.html"))
+        file_path = gmfl_path("h_line_chart_proxi.html")
+        pio.write_html(fig, file=file_path, auto_open=False)
         self.m_output_proxi.load(QUrl.fromLocalFile(file_path))
 
         self.canvas_x5.draw()
@@ -1966,8 +2068,10 @@ class Ui_MainWindow(QtWidgets.QWidget):
                         # tickangle=0, showticklabels=True, ticklen=0
                     )
                     Config.print_with_time("End fetching at : ")
-                    pio.write_html(fig, file='h_line_chart_ori.html', auto_open=False)
-                    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "h_line_chart_ori.html"))
+                    # pio.write_html(fig, file='h_line_chart_ori.html', auto_open=False)
+                    # file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "h_line_chart_ori.html"))
+                    file_path = gmfl_path("h_line_chart_ori.html")
+                    pio.write_html(fig, file=file_path, auto_open=False)
                     self.m_output_orientation.load(QUrl.fromLocalFile(file_path))
                     Config.print_with_time("Plotted...")
 
@@ -2221,8 +2325,8 @@ class Ui_MainWindow(QtWidgets.QWidget):
                         title_text="Absolute Distance(m))",
                         tickangle=0, showticklabels=True, ticklen=0)
                     Config.print_with_time("Plotting...")
-                    pio.write_html(fig, file='heatmap2.html', auto_open=False)
-                    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "heatmap2.html"))
+                    pio.write_html(fig, file='../heatmap2.html', auto_open=False)
+                    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../heatmap2.html"))
                     self.m_output_orientation.load(QUrl.fromLocalFile(file_path))
                     Config.print_with_time("Plotted...")
 
@@ -4385,7 +4489,10 @@ class Ui_MainWindow(QtWidgets.QWidget):
                             print(f"Error processing defect: {str(e)}")
                             continue
                     print(f"\nTotal submatrices stored: {len(submatrices_dict)}")
-                    output_dir = os.path.join(os.getcwd(), "ptt-22-01-2025(6)")
+                    # output_dir = os.path.join(os.getcwd(), "../ptt-22-01-2025(6)")
+                    project_name = self.project_name
+                    print(f"project name :  {project_name}")
+                    output_dir = os.path.join(os.getcwd(), 'backend_data', 'data_generated', 'submatrix_generated', project_name) + '/'
                     manage_directory(output_dir)
                     os.makedirs(output_dir, exist_ok=True)
                     for (defect_id, start_sensor, start_sensor), matrix in submatrices_dict.items():
@@ -4403,57 +4510,67 @@ class Ui_MainWindow(QtWidgets.QWidget):
                                 f"{classification}: {stats['count']}/{stats['total_processed']} defects ({acceptance_rate:.1f}% acceptance)")
 
                     # DATABASE INSERTION
-                    print("\nInserting defects into database...")
-                    with connection.cursor() as cursor:
-                        for i in finial_defect_list:
-                            runid = i['runid']
-                            start_index = i['start_reading']
-                            end_index = i['end_reading']
-                            start_sensor = i['start_sensor']
-                            end_sensor = i['end_sensor']
-                            absolute_distance = round(i['absolute_distance'] / 1000, 3)
-                            upstream = round(i['upstream'] / 1000, 3)
-                            length = round(i['length'])
-                            length_percent = round(i['length_percent'])
+                    try:
+                        print("\nInserting defects into database...")
+                        with connection.cursor() as cursor:
+                            for i in finial_defect_list:
+                                runid = i['runid']
+                                start_index = i['start_reading']
+                                end_index = i['end_reading']
+                                start_sensor = i['start_sensor']
+                                end_sensor = i['end_sensor']
+                                absolute_distance = round(i['absolute_distance'] / 1000, 3)
+                                upstream = round(i['upstream'] / 1000, 3)
+                                length = round(i['length'])
+                                length_percent = round(i['length_percent'])
 
-                            # Get corresponding trimmed_matrix (replace with your default if not found)
-                            trimmed_matrix = submatrices_dict.get((runid, start_sensor, end_sensor), pd.DataFrame())
+                                # Get corresponding trimmed_matrix (replace with your default if not found)
+                                trimmed_matrix = submatrices_dict.get((runid, start_sensor, end_sensor), pd.DataFrame())
 
-                            Width = round(i['breadth'])
-                            width_new = round(i['width_new'])
-                            width_new2 = round(i['width_new2'])
-                            depth = round(i['depth'])
-                           # print("DEBUG: i['depth'] =", i['depth'], type(i['depth']))
-                            depth_old = round(i['depth_old'])
-                            orientation = i['orientation']
-                            defect_type = i['defect_type']
-                            dimension_classification = i['dimension_classification']
-                            start_oddo1 = i['start_oddo1']
-                            end_oddo1 = i['end_oddo1']
-                            speed = round(i['speed'], 2)
-                            min_value = i['Min_Val']
-                            max_value = i['Max_Val']
+                                Width = round(i['breadth'])
+                                width_new = round(i['width_new'])
+                                width_new2 = round(i['width_new2'])
+                                depth = round(i['depth'])
+                               # print("DEBUG: i['depth'] =", i['depth'], type(i['depth']))
+                                depth_old = round(i['depth_old'])
+                                orientation = i['orientation']
+                                defect_type = i['defect_type']
+                                dimension_classification = i['dimension_classification']
+                                start_oddo1 = i['start_oddo1']
+                                end_oddo1 = i['end_oddo1']
+                                speed = round(i['speed'], 2)
+                                min_value = i['Min_Val']
+                                max_value = i['Max_Val']
 
-                            query_defect_insert = """
-                                INSERT INTO bb_new(runid, start_index, end_index, start_sensor, end_sensor, absolute_distance,
-                                upstream, length, length_percent, Width, width_new, width_new2,
-                                depth, depth_old, orientation, defect_type, dimension_classification, start_oddo1, end_oddo1, speed,
-                                Min_Val, Max_Val)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            """
+                                query_defect_insert = """
+                                    INSERT INTO bb_new(runid, start_index, end_index, start_sensor, end_sensor, absolute_distance,
+                                    upstream, length, length_percent, Width, width_new, width_new2,
+                                    depth, depth_old, orientation, defect_type, dimension_classification, start_oddo1, end_oddo1, speed,
+                                    Min_Val, Max_Val)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """
+                                try:
+                                    cursor.execute(query_defect_insert, (
+                                        int(runid), start_index, end_index, start_sensor, end_sensor, absolute_distance,
+                                        upstream,
+                                        length, length_percent, Width, width_new, width_new2,
+                                        depth, depth_old, orientation, defect_type, dimension_classification,
+                                        start_oddo1, end_oddo1, speed, min_value, max_value
+                                    ))
 
-                            cursor.execute(query_defect_insert, (
-                                int(runid), start_index, end_index, start_sensor, end_sensor, absolute_distance,
-                                upstream,
-                                length, length_percent, Width, width_new, width_new2,
-                                depth, depth_old, orientation, defect_type, dimension_classification,
-                                start_oddo1, end_oddo1, speed, min_value, max_value
-                            ))
-
-                            connection.commit()
+                                    connection.commit()
+                                except Exception as e:
+                                    print(f"error inseting data: {e}")
+                    except Exception as e:
+                        print(f"error data: {e}")
 
                    # model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/models WT5.5new_model.pkl'
-                    model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/rf_width_model.pkl'
+                   #  model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/rf_width_model.pkl'
+                    try:
+                        model_path = r'D:\Anubhav\vdt_backend\GMFL_12_Inch_Desktop\backend_data\models WT5.5\ML_MODEL_PKL\rf_width_model.pkl'
+                    except Exception as e:
+                        print(f"model path error : {e}")
+
                     model = joblib.load(model_path)  # ✅ Load actual model object
                     model_width(model, output_dir)
 
@@ -4468,1478 +4585,15 @@ class Ui_MainWindow(QtWidgets.QWidget):
                         f"\nProcessing complete! Found {len(finial_defect_list)} total defects using 3-part classification.")
                     print("Displaying visualization...")
                     figx112.show()
-
-                    # roll_dictionary = {'1': roll1}
-                    # angle = [round(i * 2.5, 1) for i in range(0, 144)]
-
-                    #                     # df_processed = df_new_tab9.copy()
-#                     sensor_columns = [f'F{i}H{j}' for i in range(1, 37) for j in range(1, 5)]
-#                     df1_raw = df_new_tab9[[f'F{i}H{j}' for i in range(1, 37) for j in range(1, 5)]]
-#
-#                     """
-# ------------------->Roll Calculation correct code for testing
-#                     """
-#                     # Config.print_with_time("Roll calculation starts at : ")
-#                     # map_ori_sens_ind, val_ori_sensVal = self.Roll_Calculation(df_new_tab9, self.roll_t)
-#                     # # print(df_clock_tranpose)
-#                     # Config.print_with_time("Roll calculation ends at : ")
-#                     #
-#                     # val_ori_sensVal_raw = val_ori_sensVal.copy()
-#                     #
-#                     # # val_ori_sensVal_raw.to_csv("C:/Users/Shradha Agarwal/Desktop/data/aaa_raw.csv")
-#                     #
-#                     # # clock_cols = list(val_ori_sensVal.columns)
-#                     # # val_ori_sensVal = val_ori_sensVal.apply(pd.to_numeric, errors='coerce')
-#                     # # window_length = 15
-#                     # # polyorder = 2
-#                     # # for col in clock_cols:
-#                     # #     data = val_ori_sensVal[col].values
-#                     # #     time_index = np.arange(len(val_ori_sensVal))
-#                     # #     coefficients = np.polyfit(time_index, data, polyorder)
-#                     # #     trend = np.polyval(coefficients, time_index)
-#                     # #     data_dettrended = data - trend
-#                     # #     data_denoised = savgol_filter(data_dettrended, window_length, polyorder)
-#                     # #     val_ori_sensVal.loc[:len(val_ori_sensVal), col] = data_denoised
-#                     #
-#                     # column_means = val_ori_sensVal.abs().mean()
-#                     # # column_means = val_ori_sensVal.mean()
-#                     # # print("column_means", column_means)
-#                     # sensor_mean = [int(i_x) for i_x in column_means]
-#                     # standard_deviation = val_ori_sensVal.std(axis=0, skipna=True).tolist()
-#                     # """
-#                     # To Calculate upper thersold Value
-#                     # """
-#                     # mean_plus_1sigma = []
-#                     # for i, data1 in enumerate(sensor_mean):
-#                     #     sigma1 = data1 + (Config.positive_sigma) * standard_deviation[i]
-#                     #     mean_plus_1sigma.append(sigma1)
-#                     # # print("sigma1_positive",mean_plus_1sigma)
-#                     #
-#                     # """
-#                     # To Calculate lower thersold value
-#                     # """
-#                     # mean_negative_3sigma = []
-#                     # for i_2, data_3 in enumerate(sensor_mean):
-#                     #     sigma_3 = data_3 - (Config.negative_sigma) * standard_deviation[i_2]
-#                     #     mean_negative_3sigma.append(sigma_3)
-#                     # # print("sigma3_negative",mean_negative_3sigma)
-#                     #
-#                     # """
-#                     # Values above the upper threshold are considered as 1,
-#                     # values below the lower threshold are considere
-#                     # d as -1,
-#                     # and values between the upper and lower thresholds are considered as 0.
-#                     # """
-#                     #
-#                     # for col, data in enumerate(val_ori_sensVal.columns):
-#                     #     val_ori_sensVal[data] = val_ori_sensVal[data].apply(
-#                     #         lambda x: 1 if x > mean_plus_1sigma[col] else (-1 if x < mean_negative_3sigma[col] else 0)
-#                     #     )
-#                     #
-#                     # # val_ori_sensVal.to_csv("C:/Users/Shradha Agarwal/Desktop/data/aaaaa.csv")
-#                     #
-#                     # # val_ori_sensVal = val_ori_sensVal.astype(int)
-#                     # # row_sum = ((val_ori_sensVal.sum(axis=1)) / 144 * 100).round(2)
-#                     # #
-#                     # # # df_elem = pd.DataFrame({"index": self.index_tab9, "ODDO1": self.oddo1_tab9, "ODDO2": self.oddo2_tab9, "ROLL": self.roll_t})
-#                     # #
-#                     # # df_elem = pd.DataFrame({"ODDO1": self.oddo1_tab9, "row_sum": row_sum})
-#                     # # frames = [df_elem, val_ori_sensVal]
-#                     # # df_new = pd.concat(frames, axis=1, join='inner')
-#                     # # df_new.loc[df_new['row_sum'] > 80, columns_to_modify] = 2
-#                     # # print("df_new.....", df_new)
-#                     #
-#                     # val_ori_sensVal_sigma = val_ori_sensVal
-#                     #
-#                     # val_ori_sensVal_raw.columns = val_ori_sensVal_sigma.columns
-#                     # df1_aligned = val_ori_sensVal_sigma.reindex(val_ori_sensVal_raw.index)
-#                     # result_new = df1_aligned * val_ori_sensVal_raw
-#                     # result_new = result_new.dropna()
-#                     # result_new.reset_index(drop=True, inplace=True)
-#                     # # print("result_new", result_new)
-#                     #
-#                     # result_raw_df = result_new.mask(result_new == 0, val_ori_sensVal_raw)
-#                     # result_raw_df = result_raw_df.dropna()
-#                     # result_raw_df.reset_index(drop=True, inplace=True)
-#                     # # print("result_raw_df", result_raw_df)
-#                     """
-# ------------------->Roll Calculation correct code for testing
-#                     """
-#
-#                     """
-# ------------------->If applied above code then comment below on from here
-#                     """
-#                     # df_new_tab9 = df_new_tab9.apply(pd.to_numeric, errors='coerce')
-#                     # window_length = 15
-#                     # polyorder = 2
-#                     #
-#                     # for col in sensor_columns:
-#                     #     time_index = np.arange(len(df_new_tab9))
-#                     #     coefficients = np.polyfit(time_index, data, polyorder)
-#                     #     trend = np.polyval(coefficients, time_index)
-#                     #     data_dettrended = data - trend
-#                     #     data_denoised = savgol_filter(data_dettrended, window_length, polyorder)
-#                     #     df_new_tab9.loc[:len(df_new_tab9), col] = data_denoised
-#
-#                     # df_new_tab9.to_csv("C:/Users/Shradha Agarwal/Desktop/bpcl clock/data_denoised.csv")
-#
-#                     # df_new_tab9 = df_new_tab9.abs()
-#                     # print("data_denoised...", df_new_tab9)
-#
-#                     roll_dictionary = {'1': self.roll_t}
-#                     angle = [round(i*2.5, 1) for i in range(0, 144)]
-#                     # print(len(angle))
-#
-#                     for i in range(2, 145):
-#                         current_values = [round((value + angle[i - 1]), 2) for value in self.roll_t]
-#                         roll_dictionary['{}'.format(i)] = current_values
-#
-#                     clock_dictionary = {}
-#                     for key in roll_dictionary:
-#                         clock_dictionary[key] = [self.degrees_to_hours_minutes(value) for value in roll_dictionary[key]]
-#
-#                     Roll_hr = pd.DataFrame(clock_dictionary)
-#                     Roll_hr.columns = [f"{h:02}:{m:02}" for h in range(12) for m in range(0, 60, 5)]
-#                     # print("Roll_hr", Roll_hr)
-#
-#                     """
-# ------------------->Column wise standard deviation
-#                     """
-#                     # column_means = df_new_tab9.abs().mean()
-#                     column_means = df_new_tab9.mean()
-#                     # print("column_means", column_means)
-#                     sensor_mean = [i_x for i_x in column_means]
-#                     standard_deviation = df_new_tab9.std(axis=0, skipna=True).tolist()
-#
-#                     # column_means_row = df_new_tab9.abs().mean(axis=1)
-#                     # # print("column_means", column_means)
-#                     # sensor_mean_row = [int(i_x) for i_x in column_means_row]
-#                     # standard_deviation_row = df_new_tab9.std(axis=1, skipna=True).tolist()
-#                     """
-#                     To Calculate upper thersold Value
-#                     """
-#                     mean_plus_1sigma = []
-#                     for i, data1 in enumerate(sensor_mean):
-#                         sigma1 = data1 + (Config.positive_sigma_col) * standard_deviation[i]
-#                         mean_plus_1sigma.append(sigma1)
-#                     # print("sigma1_positive",mean_plus_1sigma)
-#
-#                     """
-#                     To Calculate lower thersold value
-#                     """
-#                     mean_negative_3sigma = []
-#                     for i_2, data_3 in enumerate(sensor_mean):
-#                         sigma_3 = data_3 - (Config.negative_sigma) * standard_deviation[i_2]
-#                         mean_negative_3sigma.append(sigma_3)
-#                     # print("sigma3_negative",mean_negative_3sigma)
-#
-#                     # """
-#                     # To Calculate upper thersold Value row-wise
-#                     # """
-#                     # mean_plus_1sigma_row = []
-#                     # for i, data1 in enumerate(sensor_mean_row):
-#                     #     sigma1_row = data1 + (Config.positive_sigma_row) * standard_deviation_row[i]
-#                     #     mean_plus_1sigma_row.append(sigma1_row)
-#                     # # print("sigma1_positive",mean_plus_1sigma)
-#
-#                     """
-#                     To Calculate lower thersold value row-wise
-#                     """
-#                     # mean_negative_3sigma_row = []
-#                     # for i_2, data_3 in enumerate(sensor_mean_row):
-#                     #     sigma_3_row = data_3 - (Config.negative_sigma) * standard_deviation_row[i_2]
-#                     #     mean_negative_3sigma_row.append(sigma_3_row)
-#                     # # print("sigma3_negative",mean_negative_3sigma)
-#
-#                     """
-#                     Values above the upper threshold are considered as 1,
-#                     values below the lower threshold are considere
-#                     d as 1,
-#                     and values between the upper and lower thresholds are considered as 0.
-#                     """
-#
-#                     for col, data in enumerate(df_new_tab9.columns):
-#                         df_new_tab9[data] = df_new_tab9[data].apply(
-#                             lambda x: 1 if x > mean_plus_1sigma[col] else (-1 if x < mean_negative_3sigma[col] else 0)
-#                         )
-#
-#                     """
-# ------------------->Column wise and row wise standard deviation
-#                     """
-#
-#                     # ---------------- COLUMN-WISE Processing ----------------
-#                     ### **Step 1: Compute Column-Wise Mean & Standard Deviation**
-#                     # column_means = df_new_tab9.abs().mean(axis=0)
-#                     # sensor_mean = [int(i_x) for i_x in column_means]
-#                     # std_dev_col = df_new_tab9.std(axis=0, skipna=True)
-#                     #
-#                     # # Column-wise upper and lower thresholds
-#                     # mean_plus_1sigma_col = column_means + (Config.positive_sigma_col * std_dev_col)
-#                     # mean_negative_3sigma_col = column_means - (Config.negative_sigma * std_dev_col)
-#                     #
-#                     # df_processed_col = df_new_tab9.copy()
-#                     # for col, data in enumerate(df_processed_col.columns):
-#                     #     df_processed_col[data] = df_processed_col[data].apply(
-#                     #         lambda x: 1 if x > mean_plus_1sigma_col[col] else (-1 if x < mean_negative_3sigma_col[col] else 0)
-#                     #     )
-#                     # print("df_processed_col", df_processed_col)
-#                     #
-#                     # ### **Step 2: Compute Row-Wise Mean & Standard Deviation**
-#                     # row_means = df_new_tab9.abs().mean(axis=1)
-#                     # std_dev_row = df_new_tab9.std(axis=1, skipna=True)
-#                     #
-#                     # # Row-wise upper and lower thresholds
-#                     # mean_plus_1sigma_row = row_means + (Config.positive_sigma_row * std_dev_row)
-#                     # mean_negative_3sigma_row = row_means - (Config.negative_sigma * std_dev_row)
-#                     #
-#                     # df_processed_row = df_new_tab9.copy()
-#                     # for col, data in enumerate(df_processed_row.columns):
-#                     #     df_processed_row[data] = df_processed_row[data].apply(
-#                     #         lambda x: 1 if x > mean_plus_1sigma_row[col] else (-1 if x < mean_negative_3sigma_row[col] else 0)
-#                     #     )
-#                     # print("df_processed_row", df_processed_row)
-#                     #
-#                     # # Convert DataFrames to NumPy arrays for faster processing
-#                     # arr_row = df_processed_row.to_numpy()
-#                     # arr_col = df_processed_col.to_numpy()
-#                     #
-#                     # # Optimized vectorized condition checks using NumPy
-#                     # df_final = np.zeros_like(arr_row)  # Initialize with zeros
-#                     #
-#                     # mask_1 = (arr_row == 1) & (arr_col == 1)  # Mask where both are 1
-#                     # mask_neg1 = (arr_row == -1) & (arr_col == -1)  # Mask where both are -1
-#                     #
-#                     # df_final[mask_1] = 1
-#                     # df_final[mask_neg1] = -1
-#                     #
-#                     # clock_cols = [f"{h:02}:{m:02}" for h in range(12) for m in range(0, 60, 5)]
-#                     # # Convert back to DataFrame
-#                     # df_final = pd.DataFrame(df_final, columns=clock_cols, index=df_processed_col.index)
-#                     # print(df_final)
-#
-#
-#                     ### **Step 3: Apply Both Column-Wise and Row-Wise Processing in a Single DataFrame**
-#                     # df_processed = df_new_tab9.copy()
-#                     #
-#                     # for i, row in df_processed.iterrows():
-#                     #     for col in df_processed.columns:
-#                     #         value = row[col]
-#                     #         col_index = df_processed.columns.get_loc(col)
-#                     #
-#                     #         col_threshold_high = mean_plus_1sigma_col.iloc[col_index]
-#                     #         col_threshold_low = mean_negative_3sigma_col.iloc[col_index]
-#                     #         row_threshold_high = mean_plus_1sigma_row.iloc[i]
-#                     #         row_threshold_low = mean_negative_3sigma_row.iloc[i]
-#                     #
-#                     #         if value > col_threshold_high and value > row_threshold_high:
-#                     #             df_processed.at[i, col] = 1  # Mark as 1 if it exceeds either threshold
-#                     #         elif value < col_threshold_low or value < row_threshold_low:
-#                     #             df_processed.at[i, col] = -1  # Mark as -1 if below either threshold
-#                     #         else:
-#                     #             df_processed.at[i, col] = 0  # Otherwise, mark as 0
-#                     # print("df_processed", df_processed)
-#
-#                     # # df_new_tab9.to_csv("C:/Users/Shradha Agarwal/Desktop/data/aaaaa.csv")
-#
-#                     # Config.print_with_time("Roll calculation starts at : ")
-#                     # map_ori_sens_ind, val_ori_sensVal = self.Roll_Calculation(df_new_tab9, self.roll_t)
-#                     # Config.print_with_time("Roll calculation ends at : ")
-#
-#                     # val_ori_sensVal = val_ori_sensVal.astype(int)
-#                     # row_sum = ((val_ori_sensVal.sum(axis=1)) / 144 * 100).round(2)
-#                     #
-#                     # # df_elem = pd.DataFrame({"index": self.index_tab9, "ODDO1": self.oddo1_tab9, "ODDO2": self.oddo2_tab9, "ROLL": self.roll_t})
-#                     #
-#                     # df_elem = pd.DataFrame({"ODDO1": self.oddo1_tab9, "row_sum": row_sum})
-#                     # frames = [df_elem, val_ori_sensVal]
-#                     # df_new = pd.concat(frames, axis=1, join='inner')
-#
-#                     # df_new.loc[df_new['row_sum'] > 80, columns_to_modify] = 2
-#                     # print("df_new.....", df_new)
-#
-#                     clock_cols = [f"{h:02}:{m:02}" for h in range(12) for m in range(0, 60, 5)]
-#                     df_new_tab9.columns = clock_cols
-#                     filtered_df1 = df_new_tab9
-#
-#                     df1_raw.columns = filtered_df1.columns
-#                     df1_aligned = filtered_df1.reindex(df1_raw.index)
-#                     result_new = df1_aligned * df1_raw
-#                     result_new = result_new.dropna()
-#                     # print("result",result)
-#                     result_new.reset_index(drop=True, inplace=True)
-#                     t = result_new.transpose()
-#
-#                     # result_new2.to_csv("C:/Users/Shradha Agarwal/Desktop/data/result_new2.csv")
-#
-#                     """
-#                     for row_wise standard deviation
-#                     Values above the upper threshold are considered as 1,
-#                     values below the lower threshold are considere
-#                     d as 1,
-#                     and values between the upper and lower thresholds are considered as 0.
-#                     """
-#                     # Apply row-wise transformation
-#                     # result_new2 = result_new2.apply(
-#                     #     lambda row: row.apply(
-#                     #         lambda x: (
-#                     #             1 if x > 0 and x > mean_plus_1sigma_row[row.name] else
-#                     #             (-1 if x > 0 and x < mean_negative_3sigma_row[row.name] else 0)
-#                     #         )
-#                     #     ),
-#                     #     axis=1
-#                     # )
-#                     # result_new2 = result_new2.applymap(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
-#                     # # result_new2.to_csv("C:/Users/Shradha Agarwal/Desktop/data/result_new2_row.csv")
-#                     # df1.columns = result_new2.columns
-#                     # df1_aligned_new = result_new2.reindex(df1.index)
-#                     # result_new = df1_aligned_new * df1
-#                     # result_new = result_new.dropna()
-#                     # # print("result",result)
-#                     # result_new.reset_index(drop=True, inplace=True)
-#
-#                     # result_new.to_csv("C:/Users/Shradha Agarwal/Desktop/data/result_new_row.csv")
-#
-#                     result_raw_df = result_new.mask(result_new == 0, df1_raw)
-#                     result_raw_df = result_raw_df.dropna()
-#                     # print("result_raw_df",result_raw_df)
-#                     result_raw_df.reset_index(drop=True, inplace=True)
-#
-#                     mean_clock_data = result_raw_df.mean().tolist()
-#                     val_ori_raw = ((result_raw_df - mean_clock_data) / mean_clock_data) * 100
-#                     t_raw = val_ori_raw.transpose()
-#
-#                     # result_raw_df.to_csv("C:/Users/Shradha Agarwal/Desktop/data/result_raw_df.csv")
-#                     """
-# ------------------->If applied above code then comment above till here
-#                     """
-#
-#                     frames = [df_elem, result_raw_df]
-#                     df_new = pd.concat(frames, axis=1, join='inner')
-#
-#                     for col in self.df_new_proximity_orientat.columns:
-#                         df_new[col] = self.df_new_proximity_orientat[col]
-#
-#                     for col in Roll_hr.columns:
-#                         df_new[col + '_x'] = Roll_hr[col]
-#
-#                     df_new.to_pickle(folder_path + '/' + str(self.Weld_id_tab9) + '.pkl')
-#                     Config.print_with_time("Succesfully saved to clock pickle file")
-#
-#                     result_new_transpose = result_new.transpose()
-#                     # print("result_new_transpose", result_new_transpose)
-#                     data_array = result_new_transpose.values.astype(np.float64)
-#                     # print("hi")
-#
-#                     # def dfs(matrix, x, y, visited, cluster):
-#                     #     stack = [(x, y)]
-#                     #     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-#                     #     while stack:
-#                     #         cx, cy = stack.pop()
-#                     #         if (cx, cy) in visited:
-#                     #             continue
-#                     #         visited.add((cx, cy))
-#                     #         cluster.append((cx, cy))
-#                     #         for dx, dy in directions:
-#                     #             nx, ny = cx + dx, cy + dy
-#                     #             if (0 <= nx < matrix.shape[0] and 0 <= ny < matrix.shape[1] and
-#                     #                     matrix[nx, ny] != 0 and (nx, ny) not in visited):
-#                     #                 stack.append((nx, ny))
-#
-#                     def dfs(matrix, x, y, visited, cluster):
-#                         """Perform DFS to find clusters, but only include positive values."""
-#                         stack = [(x, y)]
-#                         directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-#                         while stack:
-#                             cx, cy = stack.pop()
-#                             if (cx, cy) in visited:
-#                                 continue
-#                             if matrix[cx, cy] <= 0:
-#                                 continue
-#                             visited.add((cx, cy))
-#                             cluster.append((cx, cy))
-#                             for dx, dy in directions:
-#                                 nx, ny = cx + dx, cy + dy
-#                                 if (0 <= nx < matrix.shape[0] and 0 <= ny < matrix.shape[1] and
-#                                         matrix[nx, ny] > 0 and (nx, ny) not in visited):
-#                                     stack.append((nx, ny))
-#
-#                     # def do_boxes_overlap(box1, box2):
-#                     #     """Check if two bounding boxes overlap."""
-#                     #     return not (box1['end_row'] < box2['start_row'] or
-#                     #                 box1['start_row'] > box2['end_row'] or
-#                     #                 box1['end_col'] < box2['start_col'] or
-#                     #                 box1['start_col'] > box2['end_col'])
-#                     #
-#                     # # Find clusters of connected non-zero values and calculate bounding boxes
-#                     # def merge_boxes(box1, box2):
-#                     #     """Merge two overlapping bounding boxes into one."""
-#                     #     return {
-#                     #         'start_row': min(box1['start_row'], box2['start_row']),
-#                     #         'end_row': max(box1['end_row'], box2['end_row']),
-#                     #         'start_col': min(box1['start_col'], box2['start_col']),
-#                     #         'end_col': max(box1['end_col'], box2['end_col'])
-#                     #     }
-#                     #
-#                     # visited = set()
-#                     # bounding_boxes = []
-#                     # for i in range(data_array.shape[0]):
-#                     #     for j in range(data_array.shape[1]):
-#                     #         if data_array[i, j] > 0 and (i, j) not in visited:
-#                     #             cluster = []
-#                     #             dfs(data_array, i, j, visited, cluster)
-#                     #             if cluster:  # Check if the cluster is not empty
-#                     #                 min_row = min(point[0] for point in cluster)
-#                     #                 max_row = max(point[0] for point in cluster)
-#                     #                 min_col = min(point[1] for point in cluster)
-#                     #                 max_col = max(point[1] for point in cluster)
-#                     #                 bounding_boxes.append({'start_row': min_row, 'end_row': max_row,
-#                     #                                        'start_col': min_col, 'end_col': max_col})
-#                     #
-#                     # merged_boxes = []
-#                     # while bounding_boxes:
-#                     #     box = bounding_boxes.pop(0)
-#                     #     merged = False
-#                     #     for i in range(len(merged_boxes)):
-#                     #         if do_boxes_overlap(box, merged_boxes[i]):
-#                     #             merged_boxes[i] = merge_boxes(box, merged_boxes[i])
-#                     #             merged = True
-#                     #             break
-#                     #     if not merged:
-#                     #         merged_boxes.append(box)
-#                     # df_sorted = pd.DataFrame(merged_boxes).sort_values(by='start_col')
-#                     # print("df_Sorted....", df_sorted)
-#                     # df_sorted.to_csv("C:/Users/Shradha Agarwal/Desktop/data/df_sorted.csv")
-#
-#                     def merge_all_overlapping_boxes(boxes, max_distance=3):
-#                         merged = []
-#                         while boxes:
-#                             current = boxes.pop(0)
-#                             overlap_found = True
-#                             while overlap_found:
-#                                 overlap_found = False
-#                                 i = 0
-#                                 while i < len(boxes):
-#                                     if do_boxes_overlap_or_close(current, boxes[i], max_distance):
-#                                         current = merge_boxes(current, boxes[i])
-#                                         boxes.pop(i)
-#                                         overlap_found = True
-#                                     else:
-#                                         i += 1
-#                             merged.append(current)
-#                         return merged
-#
-#                     def do_boxes_overlap_or_close(box1, box2, max_distance=3):
-#                         return do_boxes_overlap(box1, box2) or boxes_are_close(box1, box2, max_distance)
-#
-#                     def boxes_are_close(box1, box2, max_distance=3):
-#                         # Compute closest horizontal and vertical distances between boxes
-#                         h_dist = max(0, max(box1['start_col'] - box2['end_col'], box2['start_col'] - box1['end_col']))
-#                         v_dist = max(0, max(box1['start_row'] - box2['end_row'], box2['start_row'] - box1['end_row']))
-#                         return (h_dist + v_dist) <= max_distance
-#
-#                     def do_boxes_overlap(box1, box2):
-#                         """Check if two bounding boxes overlap."""
-#                         return not (box1['end_row'] < box2['start_row'] or
-#                                     box1['start_row'] > box2['end_row'] or
-#                                     box1['end_col'] < box2['start_col'] or
-#                                     box1['start_col'] > box2['end_col'])
-#
-#                     def merge_boxes(box1, box2):
-#                         """Merge two overlapping bounding boxes into one."""
-#                         return {
-#                             'start_row': min(box1['start_row'], box2['start_row']),
-#                             'end_row': max(box1['end_row'], box2['end_row']),
-#                             'start_col': min(box1['start_col'], box2['start_col']),
-#                             'end_col': max(box1['end_col'], box2['end_col'])
-#                         }
-#
-#                     def calculate_energy_based_depth(defect_matrix, reference_matrix, pipe_thickness=7.1):
-#                         """
-#                         Estimate depth of defect using energy ratio method.
-#
-#                         Parameters:
-#                         - defect_matrix (pd.DataFrame): Submatrix where defect is detected (from df3_raw)
-#                         - reference_matrix (pd.DataFrame): Clean reference region (before/after defect)
-#                         - pipe_thickness (float): Wall thickness of the pipe in mm
-#
-#                         Returns:
-#                         - depth_val (float): Estimated depth as percentage of wall thickness
-#                         """
-#                         try:
-#                             if defect_matrix.empty or reference_matrix.empty:
-#                                 return 0
-#
-#                             # defect_arr = normalize_matrix(defect_matrix.to_numpy())
-#                             # ref_arr = normalize_matrix(reference_matrix.to_numpy())
-#
-#                             defect_arr = defect_matrix.to_numpy()
-#                             ref_arr = reference_matrix.to_numpy()
-#
-#                             # Calculate signal energy: sum of squares
-#                             energy_defect = np.sum(np.square(defect_arr))
-#                             energy_ref = np.sum(np.square(ref_arr))
-#                             print("energy_defect:", energy_defect)
-#                             print("energy_ref:", energy_ref)
-#
-#                             if energy_ref == 0 or pipe_thickness == 0:
-#                                 return 0
-#
-#                             # Depth is based on how much stronger the defect signal is
-#                             # Apply power law scaling
-#                             scaling_exponent = 2.6  # try with this constant also (e.g., 2.4,2.8)
-#                             # it is giving best with 2.6 with accuracy 72% for tolrence <=10 and for tolrence <=11 giving 77%.
-#                             ratio = energy_defect / energy_ref
-#                             print("ratio : ", ratio)
-#
-#                             depth = ((ratio ** scaling_exponent) * 100) / pipe_thickness
-#                             print("depth:", depth)
-#
-#                             return round(depth, 2)
-#
-#                         except Exception as e:
-#                             print("Error in energy-based depth calculation:", e)
-#                             return 0
-#
-#                     # CLUSTERING LOGIC
-#                     print("Performing clustering to detect defect regions...")
-#                     visited = set()
-#                     bounding_boxes = []
-#
-#                     for i in range(data_array.shape[0]):
-#                         for j in range(data_array.shape[1]):
-#                             if data_array[i, j] != 0 and (i, j) not in visited:
-#                                 cluster = []
-#                                 dfs(data_array, i, j, visited, cluster)
-#                                 if cluster:
-#                                     min_row = min(point[0] for point in cluster)
-#                                     max_row = max(point[0] for point in cluster)
-#                                     min_col = min(point[1] for point in cluster)
-#                                     max_col = max(point[1] for point in cluster)
-#                                     bounding_boxes.append(
-#                                         {'start_row': min_row, 'end_row': max_row, 'start_col': min_col,
-#                                          'end_col': max_col})
-#
-#                     # Merge overlapping boxes
-#                     # merged_boxes = []
-#                     # while bounding_boxes:
-#                     #     box = bounding_boxes.pop(0)
-#                     #     merged = False
-#                     #     for i in range(len(merged_boxes)):
-#                     #         if do_boxes_overlap(box, merged_boxes[i]):
-#                     #             merged_boxes[i] = merge_boxes(box, merged_boxes[i])
-#                     #             merged = True
-#                     #             break
-#                     #     if not merged:
-#                     #         merged_boxes.append(box)
-#
-#                     merged_boxes = merge_all_overlapping_boxes(bounding_boxes)
-#                     df_sorted = pd.DataFrame(merged_boxes).sort_values(by='start_col')
-#
-#                     df_clock_holl_oddo1 = list(df_new['ODDO1'])
-#                     df_clock_holl_oddo1_hov = list((df_new['ODDO1'] / 1000).round(3))
-#
-#                     self.figure_tab9.clear()
-#                     ax_1 = self.figure_tab9.add_subplot(111)
-#                     ax_1.figure.subplots_adjust(bottom=0.213, left=0.077, top=0.855, right=1.000)
-#
-#                     # d1 = ((df_new_1.set_index(df_clock_index)).T).astype(float)
-#                     sensor_numbers = list(range(1, len(t.index) + 1))  # 1 to 144
-#                     sensor_numbers = sensor_numbers[::-1]  # Reverse the list to go top=0 → bottom=144
-#                     text = np.array([[f"{sensor_no}"] * t.shape[1] for sensor_no in sensor_numbers])
-#
-#                     heatmap_trace = go.Heatmap(x=[t_raw.columns, df_clock_holl_oddo1_hov],
-#                                                y=t_raw.index,
-#                                                z=t_raw,
-#                                                zmin=-5,
-#                                                zmax=18,
-#                                                hovertemplate='Oddo: %{x}<br>Clock:%{y}<br>Value: %{z}, sensor no: %{text}',
-#                                                # text=[[item for item in map_ori_sens_ind[col]] for col in
-#                                                #      map_ori_sens_ind.columns],
-#                                                colorscale='jet',
-#
-#                                                colorbar=dict(title='Value'))
-#
-#                     fig = go.Figure(data=heatmap_trace)
-#                     fig.update_xaxes(title_text='Absolute Distance(m)',
-#                                      # tickfont=dict(size=11),
-#                                      dtick=1000,
-#                                      # tickangle=0, showticklabels=True, ticklen=0
-#                                      )
-#                     fig.update_layout(
-#                                     width=1700,
-#                                     height=500,
-#                                     )
-#
-#                     # missing_defects = [row for _, row in df_sorted.iterrows() if row not in bounding_boxes]
-#                     # print("Excluded regions:", missing_defects)
-#
-#                     max_submatrix_list = []
-#                     min_submatrix_list = []
-#                     new_boxes = []
-#                     for _, row in df_sorted.iterrows():
-#                         start_sensor = row['start_row']
-#                         end_sensor = row['end_row']
-#                         start_reading = row['start_col']
-#                         end_reading = row['end_col']
-#                         if start_sensor == end_sensor:
-#                             pass
-#                         else:
-#                             try:
-#                                 submatrix = result_new.iloc[start_reading:end_reading + 1, start_sensor:end_sensor + 1]
-#                                 submatrix = submatrix.apply(pd.to_numeric, errors='coerce')  # Ensure numeric data
-#                                 if submatrix.isnull().values.any():
-#                                     print("Submatrix contains NaN values, skipping this iteration.")
-#                                     continue
-#                                 max_value = submatrix.max().max()
-#                                 max_submatrix_list.append(max_value)
-#                                 two_d_list = submatrix.values.tolist()
-#                                 min_positive = min(x for row in two_d_list for x in row if x > 0)
-#                                 min_submatrix_list.append(min_positive)
-#                             except Exception as e:
-#                                 print(f"Error found 1: {str(e)}")
-#                                 traceback.print_exc()
-#                                 pass
-#
-#                     max_of_all = max(max_submatrix_list)  # Get the max of all submatrix max_values
-#                     min_of_all = min(min_submatrix_list)
-#                     threshold_value = round(min_of_all + (max_of_all - min_of_all) * Config.defectBox_threshold)
-#                     # print("Max of all submatrices:", max_of_all)
-#                     # print("Min of all submatrices:", min_of_all)
-#                     # print("Threshold Value:", threshold_value)
-#
-#                     submatrices_dict = {}
-#                     finial_defect_list = []
-#                     defect_counter = 1
-#                     # Statistics tracking for each classification
-#                     classification_stats = {
-#                         "Very Small (1-10%)": {"count": 0, "total_processed": 0},
-#                         "Small (10-20%)": {"count": 0, "total_processed": 0},
-#                         "Medium (20-30%)": {"count": 0, "total_processed": 0},
-#                         "Large (30-40%)": {"count": 0, "total_processed": 0},
-#                         "Very Large (40%+)": {"count": 0, "total_processed": 0},
-#                         "Below 1%": {"count": 0, "total_processed": 0}
-#                     }
-#                     for _, row in df_sorted.iterrows():
-#                         start_sensor = row['start_row']
-#                         end_sensor = row['end_row']
-#                         start_reading = row['start_col']
-#                         end_reading = row['end_col']
-#
-#                         # start_sensor = row['start_col']
-#                         # end_sensor = row['end_col']
-#                         # start_reading = row['start_row']
-#                         # end_reading = row['end_row']
-#                         if start_sensor == end_sensor:
-#                             continue
-#                         else:
-#                             try:
-#                                 submatrix = df1_raw.iloc[start_reading:end_reading + 1, start_sensor:end_sensor + 1]
-#                                 submatrix = submatrix.apply(pd.to_numeric, errors='coerce')  # Ensure numeric data
-#                                 two_d_list = submatrix.values.tolist()
-#                                 max_value = submatrix.max().max()
-#                                 min_positive = min(x for row in two_d_list for x in row if x > 0)
-#
-#                                 counter_difference = end_reading - start_reading
-#                                 # print("counter_difference", counter_difference)
-#                                 divid = int(counter_difference / 2)
-#                                 center = start_reading + divid
-#                                 factor1 = divid * Config.l_per_1
-#                                 start1 = int(center - factor1)
-#                                 end1 = int(center + factor1)
-#                                 l_per1 = (df_clock_holl_oddo1[end1] - df_clock_holl_oddo1[start1])
-#
-#                                 # APPLY 3-PART ADAPTIVE REFINEMENT
-#                                 sigma_multiplier, refinement_factor, classification = get_adaptive_sigma_refinement(l_per1)
-#                                 adjusted_threshold = threshold_value * sigma_multiplier
-#
-#                                 valid_columns = 0
-#                                 for col_idx in range(start_sensor, end_sensor + 1):
-#                                     adaptive_sigma = sensor_mean[col_idx] + (sigma_multiplier * standard_deviation[col_idx])
-#                                     if submatrix.iloc[:, col_idx - start_sensor].max() > adaptive_sigma:
-#                                         valid_columns += 1
-#                                     if valid_columns / (end_sensor - start_sensor + 1) < 0.3:
-#                                         print(
-#                                             f"✗ Defect rejected: Only {valid_columns} columns passed adaptive threshold")
-#                                         continue
-#                                 # Track statistics
-#                                 classification_stats[classification]["total_processed"] += 1
-#
-#                                 print(
-#                                     f"Defect {defect_counter}: Length={l_per1:.1f}mm, Class={classification}, Threshold={adjusted_threshold:.1f}")
-#
-#                                 # if (threshold_value <= max_value <= max_of_all) or (threshold_value <= min_positive <= max_of_all):
-#                                 if (adjusted_threshold <= max_value <= max_of_all):
-#                                     print("max_value", max_value)
-#                                     print("min_positive", min_positive)
-#                                     print("Max of all submatrices:", max_of_all)
-#                                     print("Threshold Value:", threshold_value)
-#                                     print(".....................................................")
-#
-#                                     depth_old = (max_value-min_positive)/min_positive*100
-#                                     print("depth_old", depth_old)
-#
-#                                     max_column = submatrix.max().idxmax()
-#                                     max_index = submatrix.columns.get_loc(max_column)
-#                                     print("max_index", max_index)
-#                                     sub_matrix_list = list(submatrix[max_column])
-#
-#                                     # if all(val < 0 for val in sub_matrix_list):  # All values are negative
-#                                     #     max_val = max(sub_matrix_list)
-#                                     #     min_val = min(sub_matrix_list)
-#                                     #     print("max_val,min_val", max_val, min_val)
-#                                     # elif all(val > 0 for val in sub_matrix_list):  # All values are positive
-#                                     #     max_val = max(sub_matrix_list)
-#                                     #     min_val = min(sub_matrix_list)
-#                                     #     print("max_val,min_val", max_val, min_val)
-#                                     # else:
-#                                     #     max_val = max(sub_matrix_list)
-#                                     #     min_val = min(sub_matrix_list)
-#                                     #     print("max_val,min_val", max_val, min_val)
-#
-#                                     print("start_sensor", start_sensor)
-#                                     print("end_sensor", end_sensor)
-#                                     print("start_reading", start_reading)
-#                                     print("end_reading", end_reading)
-#
-#                                     # factor2 = divid * Config.l_per_2
-#                                     # start2 = round(center - factor2)
-#                                     # end2 = round(center + factor2)
-#                                     # l_per2 = (df_clock_holl_oddo1[end2] - df_clock_holl_oddo1[start2])
-#                                     #
-#                                     # factor3 = divid * Config.l_per_3
-#                                     # start3 = round(center - factor3)
-#                                     # end3 = round(center + factor3)
-#                                     # l_per3 = (df_clock_holl_oddo1[end3] - df_clock_holl_oddo1[start3])
-#                                     #
-#                                     # factor4 = divid * Config.l_per_4
-#                                     # start4 = round(center - factor4)
-#                                     # end4 = round(center + factor4)
-#                                     # l_per4 = (df_clock_holl_oddo1[end4] - df_clock_holl_oddo1[start4])
-#
-#                                     # print("start1", start1)
-#                                     # print("end1", end1)
-#                                     # print("start2", start2)
-#                                     # print("end2", end2)
-#                                     # print("start3", start3)
-#                                     # print("end3", end3)
-#                                     # print("start4", start4)
-#                                     # print("end4", end4)
-#
-#                                     defect_start_oddo = df_clock_holl_oddo1[start_reading]
-#                                     defect_end_oddo = df_clock_holl_oddo1[end_reading]/1000
-#                                     # print("defect_start_oddo", defect_start_oddo)
-#                                     # print("defect_end_oddo", defect_end_oddo)
-#                                     time_sec = end_reading/1500
-#                                     speed = defect_end_oddo/time_sec
-#                                     speed = defect_end_oddo/time_sec
-#                                     print("speed(m/s)", speed)
-#
-#                                     base_value = sensor_mean[max_index]
-#                                     print("base_value", base_value)
-#                                     # max_col_index = submatrix.loc[max_row_index].idxmax()
-#                                     # print("max_col_index....",max_col_index)
-#
-#                                     internal_external = internal_or_external(self.df_new_proximity_orientat, max_index)
-#                                     print("internal_external", internal_external)
-#
-#                                     absolute_distance = (df_clock_holl_oddo1[start_reading])
-#                                     print("absolute_distance", absolute_distance)
-#                                     length = (df_clock_holl_oddo1[end_reading] - df_clock_holl_oddo1[start_reading])
-#                                     print("length of defect", length)
-#
-#                                     """
-#                                     Calculate latitude and longitude
-#                                     """
-#                                     long, lat = lat_long(absolute_distance, self.runid)
-#                                     print("latitude", lat)
-#                                     print("longitude", long)
-#
-#                                     upstream_oddo1 = (df_clock_holl_oddo1[start_reading] - df_clock_holl_oddo1[0])
-#                                     print("upstream1", upstream_oddo1)
-#
-#                                     """
-#                                     Calculate Wall thickness
-#                                     """
-#                                     # if self.Weld_id_tab9 == 2:
-#                                     #     wt = 5.5
-#                                     # else:
-#                                     #     wt = Config.pipe_thickness
-#
-#                                     wt = Config.pipe_thickness
-#
-#                                     # pipe_length_oddo1 = (df_clock_holl_oddo1[-1] - df_clock_holl_oddo1[0])/1000
-#                                     # print("pipe_length", pipe_length_oddo1)
-#
-#                                     # width = Width_calculation(start_sensor, end_sensor)
-#                                     # print("breadth of defect", width)
-#
-#                                     # sen_diff = end_sensor - start_sensor
-#                                     # if sen_diff > 2:
-#                                     #     counter_difference_1 = (end_sensor + 1) - (start_sensor + 1)
-#                                     #     divid_1 = int(counter_difference_1/2)
-#                                     #     center_1 = start_sensor + divid_1
-#                                     #     factor1_1 = divid_1 * Config.w_per_1
-#                                     #     start1_1 = (int(center_1 - factor1_1)) - 1
-#                                     #     end1_1 = (int(center_1 + factor1_1)) - 1
-#                                     # else:
-#                                     #     start1_1 = start_sensor
-#                                     #     end1_1 = end_sensor
-#                                     counter_difference_1 = (end_sensor + 1) - (start_sensor + 1)
-#                                     divid_1 = int(counter_difference_1 / 2)
-#                                     center_1 = start_sensor + divid_1
-#                                     factor1_1 = divid_1 * Config.w_per_1
-#                                     start1_1 = (int(center_1 - factor1_1)) - 1
-#                                     end1_1 = (int(center_1 + factor1_1)) - 1
-#                                     width = Width_calculation(start_sensor, end_sensor)
-#                                     print("width_new", width)
-#
-#                                     df_copy_submatrix = df1_raw.iloc[start_reading:end_reading+1, start_sensor:end_sensor + 1]
-#                                     ref_start = max(0, start_reading - (end_reading - start_reading))
-#                                     ref_end = ref_end = start_reading - 1
-#                                     reference_matrix = df1_raw.iloc[ref_start:ref_end + 1, start_sensor:end_sensor + 1]
-#                                     depth_val2 = calculate_energy_based_depth(df_copy_submatrix, reference_matrix, pipe_thickness = Config.pipe_thickness)
-#                                     depth_val2 = min(depth_val2, 100)
-#
-#                                     ############ Width modified code, duplicacy started from here ############
-#                                     def replace_first_column(df_n, s_sensor, e_sensor):
-#                                         s_sensor = s_sensor + 1
-#                                         e_sensor = e_sensor + 1
-#                                         # Generate new column names within the given range
-#                                         new_columns = list(range(s_sensor, s_sensor + df_n.shape[1]))
-#                                         # Assign new column names
-#                                         df_n.columns = new_columns
-#                                         # Drop the last column if it exceeds end_sensor
-#                                         df_n = df_n.loc[:, df_n.columns <= e_sensor]
-#                                         return df_n
-#
-#                                     # df_duplicate_std = replace_first_column(df_copy_submatrix, start_sensor, end_sensor)
-#                                     # df_duplicate_std.columns = df_duplicate_std.columns.astype(str)
-#                                     # print("df_duplicate", df_duplicate)
-#
-#                                     df_duplicate = replace_first_column(df_copy_submatrix, start_sensor, end_sensor)
-#                                     # df_duplicate = replace_first_column(df_copy_submatrix, start1_1, end1_1)
-#                                     df_duplicate.columns = df_duplicate.columns.astype(str)
-#
-#                                     outer_diameter_1 = Config.outer_dia  # 12-inch pipe
-#                                     thickness_1 = Config.pipe_thickness  # Replace with Config.pipe_thickness if using from config
-#                                     inner_diameter_1 = outer_diameter_1 - 2 * thickness_1
-#                                     radius_1 = inner_diameter_1 / 2
-#                                     theta_2 = Config.width_angle1  # approximate value for both pipes
-#                                     c_1 = math.radians(theta_2)
-#                                     theta_3 = Config.width_angle2  # approximate value for both pipes
-#                                     d_1 = math.radians(theta_3)
-#                                     theta_4 = Config.width_angle3  # 9.97 for thickness 5.5 and 9.53 for thickness 7.1
-#                                     e_1 = math.radians(theta_4)  # Convert to radians
-#                                     # print("c1, d1", c_1, d_1)
-#                                     x1 = round(radius_1 * c_1, 1)
-#                                     y1 = round(radius_1 * d_1, 1)
-#                                     z1 = round(radius_1 * e_1, 1)
-#
-#                                     # def process_csv(df_dupe):
-#                                     #     new_data = {}
-#                                     #     next_col = None
-#                                     #
-#                                     #     base = round(x1 / Config.div_factor)
-#                                     #     c = round(y1 / Config.div_factor)
-#                                     #     dee = round(z1 / Config.div_factor)
-#                                     #
-#                                     #     # base1 = base//2
-#                                     #     # base2 = base-base1
-#                                     #
-#                                     #     c1 = c//2
-#                                     #     c2 = c-c1
-#                                     #
-#                                     #     dee1 = dee//2
-#                                     #     dee2 = dee-dee1
-#                                     #
-#                                     #     def generate_suffixes(n):
-#                                     #         return [chr(ord('a') + i) for i in range(n)]
-#                                     #
-#                                     #     base_suffixes = generate_suffixes(int(base))
-#                                     #
-#                                     #     # base1_suffixes = generate_suffixes(int(base1))
-#                                     #     # base2_suffixes = generate_suffixes(int(base2))
-#                                     #     c1_suffixes = generate_suffixes(int(c1))
-#                                     #     c2_suffixes = generate_suffixes(int(c2))
-#                                     #     dee1_suffixes = generate_suffixes(int(dee1))
-#                                     #     dee2_suffixes = generate_suffixes(int(dee2))
-#                                     #
-#                                     #     """" without value_decrease in matrix """
-#                                     #     for colu in df_dupe.columns:
-#                                     #         col_int = int(colu)
-#                                     #         next_col = str(col_int + 1)
-#                                     #
-#                                     #         if next_col in df_dupe.columns:
-#                                     #             # Special Case 1
-#                                     #             if col_int % 4 == 0 and col_int % 16 != 0:
-#                                     #                 for idx, suffix in enumerate(c1_suffixes):
-#                                     #                     # reduction = 1- ((idx+1)*Config.value_decrease_percent)
-#                                     #                     # new_data[f"{col_int}{suffix}_extra"] = df_dupe[colu]*reduction
-#                                     #                     new_data[f"{col_int}{suffix}_extra"] = df_dupe[colu]
-#                                     #                 # for suffix in c2_suffixes:
-#                                     #                 for idx, suffix in enumerate(c2_suffixes):
-#                                     #                     # reduction = 1 - ((idx + 1) * Config.value_decrease_percent)
-#                                     #                     # new_data[f"{int(next_col)}{suffix}_extra"] = df_dupe[next_col]*reduction
-#                                     #                     new_data[f"{int(next_col)}{suffix}_extra"] = df_dupe[next_col]
-#                                     #
-#                                     #             # Special Case 2
-#                                     #             elif col_int % 16 == 0:
-#                                     #                 # for suffix in dee1_suffixes:
-#                                     #                 for idx,suffix in enumerate(dee1_suffixes):
-#                                     #                     # reduction = 1 - ((idx+1) * Config.value_decrease_percent)
-#                                     #                     # new_data[f"{col_int}{suffix}_extra2"] = df_dupe[colu]*reduction
-#                                     #                     new_data[f"{col_int}{suffix}_extra2"] = df_dupe[colu]
-#                                     #                 # for suffix in dee2_suffixes:
-#                                     #                 for idx, suffix in enumerate(dee2_suffixes):
-#                                     #                     # reduction = 1 - ((idx + 1) * Config.value_decrease_percent)
-#                                     #                     # new_data[f"{int(next_col)}{suffix}_extra2"] = df_dupe[next_col]*reduction
-#                                     #                     new_data[f"{int(next_col)}{suffix}_extra2"] = df_dupe[next_col]
-#                                     #
-#                                     #             else:
-#                                     #                 for idx,suffix in enumerate(base_suffixes):
-#                                     #                     # reduction = 1- ((idx+1)*Config.value_decrease_percent)
-#                                     #                     # new_data[f"{col_int}{suffix}"] = df_dupe[colu]*reduction
-#                                     #                     new_data[f"{col_int}{suffix}"] = df_dupe[colu]
-#                                     #
-#                                     #     """" with value_decrease in matrix """
-#                                     #     # for colu in df_dupe.columns:
-#                                     #     #     # print(f"colu: {colu}, type: {type(colu)}")
-#                                     #     #
-#                                     #     #     col_int = int(colu)
-#                                     #     #     next_col = str(col_int + 1)
-#                                     #     #
-#                                     #     #     if next_col in df_dupe.columns:
-#                                     #     #         # Special Case 1
-#                                     #     #         if col_int % 4 == 0 and col_int % 16 != 0:
-#                                     #     #             for idx, suffix in enumerate(c1_suffixes):
-#                                     #     #                 reduction = 1- ((idx+1)*Config.value_decrease_percent)
-#                                     #     #                 new_data[f"{col_int}{suffix}_extra"] = df_dupe[colu]*reduction
-#                                     #     #             # for suffix in c2_suffixes:
-#                                     #     #             for idx, suffix in enumerate(c2_suffixes):
-#                                     #     #                 reduction = 1 - ((idx + 1) * Config.value_decrease_percent)
-#                                     #     #                 new_data[f"{int(next_col)}{suffix}_extra"] = df_dupe[next_col]*reduction
-#                                     #     #
-#                                     #     #         # Special Case 2
-#                                     #     #         elif col_int % 16 == 0:
-#                                     #     #             # for suffix in dee1_suffixes:
-#                                     #     #             for idx,suffix in enumerate(dee1_suffixes):
-#                                     #     #                 reduction = 1 - ((idx+1) * Config.value_decrease_percent)
-#                                     #     #                 new_data[f"{col_int}{suffix}_extra2"] = df_dupe[colu]*reduction
-#                                     #     #             # for suffix in dee2_suffixes:
-#                                     #     #             for idx, suffix in enumerate(dee2_suffixes):
-#                                     #     #                 reduction = 1 - ((idx + 1) * Config.value_decrease_percent)
-#                                     #     #                 new_data[f"{int(next_col)}{suffix}_extra2"] = df_dupe[next_col]*reduction
-#                                     #     #
-#                                     #     #         else:
-#                                     #     #             # Base duplication
-#                                     #     #
-#                                     #     #             # for suffix in base_suffixes:
-#                                     #     #             for idx,suffix in enumerate(base_suffixes):
-#                                     #     #                 reduction = 1- ((idx+1)*Config.value_decrease_percent)
-#                                     #     #                 new_data[f"{col_int}{suffix}"] = df_dupe[colu]*reduction
-#                                     #     #
-#                                     #     #
-#                                     #     #             # for suffix in base1_suffixes:
-#                                     #     #             #     new_data[f"{col_int}{suffix}"] = df_dupe[colu]
-#                                     #     #             # for suffix in base2_suffixes:
-#                                     #     #             #     new_data[f"{int(next_col)}{suffix}"] = df_dupe[next_col]
-#                                     #
-#                                     #     new_df_duplicate = pd.DataFrame(new_data)
-#                                     #     return new_df_duplicate
-#                                     def extract_int_prefix(s):
-#                                         m = re.match(r'^(\d+)', str(s))
-#                                         return int(m.group(1)) if m else None
-#
-#                                     def get_first_last_integer_column(cols):
-#                                         int_vals = [extract_int_prefix(col) for col in cols]
-#                                         int_vals = [v for v in int_vals if v is not None]
-#                                         if not int_vals:
-#                                             return None, None
-#                                         return min(int_vals), max(int_vals)
-#
-#                                     def process_csv_interpolate(df_dupe):
-#                                         """
-#                                         Like the original process_csv, but uses interpolation (linear or cubic)
-#                                         instead of duplication for the new columns. Suffixes and column names are
-#                                         generated exactly as in the original code, with robust end-case handling.
-#                                         """
-#                                         new_data = {}
-#                                         next_col = None
-#
-#                                         # Use your previously computed distances
-#                                         base = round(x1 / Config.div_factor)
-#                                         c = round(y1 / Config.div_factor)
-#                                         dee = round(z1 / Config.div_factor)
-#
-#                                         c1 = c // 2
-#                                         c2 = c - c1
-#                                         dee1 = dee // 2
-#                                         dee2 = dee - dee1
-#
-#                                         def generate_suffixes(n):
-#                                             return [chr(ord('a') + i) for i in range(int(n))]
-#
-#                                         base_suffixes = generate_suffixes(int(base))
-#                                         c1_suffixes = generate_suffixes(int(c1))
-#                                         c2_suffixes = generate_suffixes(int(c2))
-#                                         dee1_suffixes = generate_suffixes(int(dee1))
-#                                         dee2_suffixes = generate_suffixes(int(dee2))
-#
-#                                         for colu in df_dupe.columns:
-#                                             col_int = int(colu)
-#                                             next_col = str(col_int + 1)
-#
-#                                             if next_col in df_dupe.columns:
-#                                                 col_vals = df_dupe[colu].values
-#                                                 next_col_vals = df_dupe[next_col].values
-#
-#                                                 def interpolate_between(a, b, n, kind='cubic'):
-#                                                     # For short arrays, always use linear
-#                                                     if n == 0:
-#                                                         return np.empty((0, len(a)))
-#                                                     x = np.array([0, 1])
-#                                                     arr = np.vstack([a, b]).T
-#                                                     interpolated = []
-#                                                     for row in arr:
-#                                                         # If both points are the same, just duplicate
-#                                                         if np.allclose(row[0], row[1]):
-#                                                             interpolated.append(np.full(n, row[0]))
-#                                                             continue
-#                                                         # Use cubic only if possible, otherwise linear
-#                                                         if kind == 'cubic' and n >= 3:
-#                                                             try:
-#                                                                 f = interp1d(x, row, kind='cubic',
-#                                                                              fill_value="extrapolate")
-#                                                             except Exception:
-#                                                                 f = interp1d(x, row, kind='linear',
-#                                                                              fill_value="extrapolate")
-#                                                         else:
-#                                                             f = interp1d(x, row, kind='linear',
-#                                                                          fill_value="extrapolate")
-#                                                         xs = np.linspace(0, 1, n + 2)[1:-1] if n > 0 else []
-#                                                         interpolated.append(f(xs) if len(xs) > 0 else [])
-#                                                     return np.array(interpolated).T if n > 0 else np.empty((0, len(a)))
-#
-#                                                 # Special Case 1: Between flappers (multiples of 4, not 16)
-#                                                 if col_int % 4 == 0 and col_int % 16 != 0:
-#                                                     c1_interp = interpolate_between(col_vals, next_col_vals,
-#                                                                                     len(c1_suffixes), kind='cubic')
-#                                                     for idx, suffix in enumerate(c1_suffixes):
-#                                                         new_data[f"{col_int}{suffix}_extra"] = c1_interp[idx] if \
-#                                                         c1_interp.shape[0] > 0 else col_vals
-#                                                     c2_interp = interpolate_between(next_col_vals, col_vals,
-#                                                                                     len(c2_suffixes), kind='cubic')
-#                                                     for idx, suffix in enumerate(c2_suffixes):
-#                                                         new_data[f"{int(next_col)}{suffix}_extra"] = c2_interp[idx] if \
-#                                                         c2_interp.shape[0] > 0 else next_col_vals
-#
-#                                                 # Special Case 2: Between arms (multiples of 16)
-#                                                 elif col_int % 16 == 0:
-#                                                     dee1_interp = interpolate_between(col_vals, next_col_vals,
-#                                                                                       len(dee1_suffixes), kind='cubic')
-#                                                     for idx, suffix in enumerate(dee1_suffixes):
-#                                                         new_data[f"{col_int}{suffix}_extra2"] = dee1_interp[idx] if \
-#                                                         dee1_interp.shape[0] > 0 else col_vals
-#                                                     dee2_interp = interpolate_between(next_col_vals, col_vals,
-#                                                                                       len(dee2_suffixes), kind='cubic')
-#                                                     for idx, suffix in enumerate(dee2_suffixes):
-#                                                         new_data[f"{int(next_col)}{suffix}_extra2"] = dee2_interp[
-#                                                             idx] if dee2_interp.shape[0] > 0 else next_col_vals
-#
-#                                                 # Base case: Normal sensor spacing
-#                                                 else:
-#                                                     base_interp = interpolate_between(col_vals, next_col_vals,
-#                                                                                       len(base_suffixes), kind='cubic')
-#                                                     for idx, suffix in enumerate(base_suffixes):
-#                                                         new_data[f"{col_int}{suffix}"] = base_interp[idx] if \
-#                                                         base_interp.shape[0] > 0 else col_vals
-#
-#                                         new_df_duplicate = pd.DataFrame(new_data, index=df_dupe.index)
-#                                         return new_df_duplicate
-#
-#                                     def process_submatrix(df_diff):
-#                                         if df_diff.isnull().values.any():
-#                                             return None
-#
-#                                         # try:
-#                                         #     max_val = df_diff.max().max()
-#                                         #     min_pos_val = df_diff[df_diff > 0].min().min()
-#                                         #     signal_strength = np.log10(max_val + 1)  # Avoid log(0)
-#                                         # except:
-#                                         #     max_val = None
-#                                         #     min_pos_val = None
-#                                         #     signal_strength = 0
-#
-#                                         ### STDEV ON DEFECT MATRIX ROW-WISE ###
-#                                         # print("df_diff", df_diff)
-#                                         # df_diff = df_diff.applymap(lambda x: np.log(x) if x > 0 else np.nan)
-#                                         # adaptive_sigma_row = get_adaptive_sigma_row_values(length_percent)
-#                                         # ratio = round((max_val - min_pos_val) / (min_pos_val + 1e-5), 2)
-#                                         # sigma_multiplier, _, _ = get_adaptive_sigma_refinement(length_percent)
-#                                         # effective_positive_sigma_row = adaptive_sigma_row * positive_sigma_row
-#
-#                                         df_diff_mean = list(df_diff.median(axis=1))
-#                                         df_std_dev = list(df_diff.std(axis=1, ddof=1))
-#                                         mean_plus_std = list(
-#                                             map(lambda x, y: x + y * (Config.positive_sigma_row), df_diff_mean, df_std_dev))
-#                                         # mean_plus_std = list(map(lambda x, y: x * (positive_sigma_row), df_diff_mean, df_std_dev))
-#                                         mean_plus_std_series = pd.Series(mean_plus_std, index=df_diff.index)
-#                                         # mean_neg_std = list(map(lambda x, y: x - y * (negative_sigma_row), df_diff_mean, df_std_dev))
-#                                         # mean_neg_std_series = pd.Series(mean_neg_std, index=df_diff.index)
-#                                         # Apply the function row-wise
-#                                         df_result = df_diff.apply(lambda row: row.map(
-#                                             lambda x: 1 if x > mean_plus_std_series[row.name] else 0), axis=1)
-#
-#                                         ### STDEV ON DEFECT MATRIX COLUMN-WISE ###
-#                                         # df_diff_mean = df_diff.median(axis=0).tolist()
-#                                         # df_std_dev = df_diff.std(axis=0, skipna=True, ddof=1).tolist()
-#                                         # mean_plus_std = []
-#                                         # for i_std, data_std in enumerate(df_diff_mean):
-#                                         #     sigma_std_col = data_std + (positive_sigma_row * df_std_dev[i_std])
-#                                         #     mean_plus_std.append(sigma_std_col)
-#                                         # df_result = pd.DataFrame(index=df_diff.index)
-#                                         # for col1_std, data1_std in enumerate(df_diff.columns):
-#                                         #     df_result[data1_std] = df_diff[data1_std].apply(lambda x: 1 if x > mean_plus_std[col1_std] else 0)
-#
-#                                         count_ones_per_column = df_result.sum(axis=0)
-#                                         first_col_with_1 = count_ones_per_column.ne(0).idxmax()
-#                                         last_col_with_1 = count_ones_per_column[::-1].ne(0).idxmax()
-#                                         first_col_with_1_idx = df_result.columns.get_loc(first_col_with_1)
-#                                         last_col_with_1_idx = df_result.columns.get_loc(last_col_with_1)
-#
-#                                         df_between = df_result.iloc[:, first_col_with_1_idx:last_col_with_1_idx + 1]
-#                                         # Count columns that have at least one '1'
-#                                         num_cols_with_ones = (df_between == 1).any(axis=0).sum()
-#                                         num_cols_between = last_col_with_1_idx - first_col_with_1_idx + 1
-#
-#                                         # Step 3: Count the number of columns to remove from start and end
-#                                         num_cols_to_remove_start = first_col_with_1_idx
-#                                         num_cols_to_remove_end = len(count_ones_per_column) - 1 - last_col_with_1_idx
-#
-#                                         width_1_only = round(num_cols_with_ones * Config.div_factor)
-#                                         width_0_yes = round(num_cols_between * Config.div_factor)
-#                                         print("width_1_only", width_1_only)
-#                                         print("width_0_yes", width_0_yes)
-#                                         trimmed_original_matrix = df_diff.iloc[:,
-#                                                                   first_col_with_1_idx: last_col_with_1_idx + 1]
-#                                         new_start_sensor = start1_1 + num_cols_to_remove_start
-#                                         new_end_sensor = end1_1 - num_cols_to_remove_end
-#                                         return trimmed_original_matrix, width_1_only, width_0_yes, new_start_sensor, new_end_sensor
-#
-#                                     modified_df = process_csv_interpolate(df_duplicate)
-#                                     # if end1_1 - start1_1 > 2:
-#                                     #     trimmed_matrix, width_1_only, width_0_yes, new_start_sensor, new_end_sensor = process_submatrix(modified_df)
-#                                     #     print(trimmed_matrix.columns.to_list())
-#                                     # else:
-#                                     #     num_cols = len(modified_df.columns)
-#                                     #     width_1_only = round(num_cols * Config.div_factor)
-#                                     #     print(modified_df.columns.to_list())
-#                                     trimmed_matrix, width_1_only, width_0_yes, new_start_sensor, new_end_sensor = process_submatrix(modified_df)
-#                                     new_start_sensor, new_end_sensor = get_first_last_integer_column(
-#                                         trimmed_matrix.columns)
-#                                     mapped_start_sensor = len(result_new_transpose.index) - start_sensor
-#                                     mapped_end_sensor = len(result_new_transpose.index) - end_sensor
-#                                     if mapped_end_sensor < mapped_start_sensor:
-#                                         mapped_start_sensor, mapped_end_sensor = mapped_end_sensor, mapped_start_sensor
-#
-#                                     print("start_reading", start_reading, 'end_sensor', end_sensor)
-#                                     avg_counter = round((start1+end1)/2)
-#                                     avg_sensor = round((start_sensor+end_sensor)/2)
-#                                     orientation = Roll_hr.iloc[avg_counter, avg_sensor]
-#                                     # k2 = map_ori_sens_ind.iloc[avg_counter, avg_sensor]
-#                                     # orientation = k2[2]
-#
-#                                     # avg = round((start_sensor+end_sensor)/2)
-#                                     # orientation = defect_angle_x(self.roll_t, avg)
-#                                     # # orientation = df_new_tab9.columns[max_index]
-#                                     print("orientation", orientation)
-#
-#                                     thickness_pipe = Config.pipe_thickness  ### Value Change according to wall thickness
-#                                     dimension_classification = get_type_defect_1(thickness_pipe, runid,
-#                                                                                  length, width)
-#                                     print("dimension_classification", dimension_classification)
-#
-#                                     try:
-#                                         ################# each pipe thickness can be change #################
-#                                         depth_val = round((((length / width) * (max_value / base_value))*100)/Config.pipe_thickness)
-#                                         print("depth_val", depth_val)
-#                                     except:
-#                                         depth_val = 0
-#
-#                                     if depth_val2 > 1 and width > 1 and length > 1:
-#                                         # Save the submatrix with key as a tuple of coordinates
-#                                         submatrices_dict[(Weld_id_tab9, defect_counter)] = submatrix
-#
-#                                         print("depth_old.....", depth_old)
-#                                         runid = self.runid
-#                                         finial_defect_list.append(
-#                                             {"runid": runid, "start_reading": start_reading, "end_reading": end_reading,
-#                                              "start_sensor": mapped_start_sensor,
-#                                              "end_sensor": mapped_end_sensor,
-#                                              "absolute_distance": absolute_distance, "upstream_oddo1": upstream_oddo1,
-#                                              "length": length, "breadth": width, "width_new": width_1_only, 'orientation': orientation,
-#                                              "dimension_classification": dimension_classification, "defect_type": internal_external,
-#                                              "depth": depth_val2, "WT": wt,
-#                                              "max_value": start1_1, "base_value": end1_1, "min_value": min_positive,
-#                                              "l_per1": l_per1,
-#                                              # "l_per2": l_per2, "l_per3": l_per3, "l_per4": l_per4,
-#                                              "speed": speed, "latitude":lat, "longitude": long
-#                                              })
-#                                         # k={'start_reading':start_reading,'end_reading':end_reading,'start_sensor':start_sensor,'end_sensor':end_sensor,'','max_value':max_value}
-#                                         # print(k)
-#                                         fig.add_shape(
-#                                             type='rect',
-#                                             x0=start_reading - 0.5,  # Adjust for center of cells
-#                                             x1=end_reading + 0.5,
-#                                             y0=start_sensor - 0.5,
-#                                             y1=end_sensor + 0.5,
-#                                             line=dict(color='red', width=1),
-#                                             fillcolor='rgba(255, 0, 0, 0.1)'  # Optional: transparent fill
-#                                         )
-#                                         fig.add_annotation(
-#                                             x=(start_reading + end_reading) / 2,
-#                                             y=start_sensor - 2,  # Position above the box; adjust if needed
-#                                             text=str(defect_counter),
-#                                             showarrow=False,
-#                                             font=dict(color="red", size=12),
-#                                             bgcolor="white",
-#                                             bordercolor="black",
-#                                             borderwidth=1
-#                                         )
-#
-#                                         # Increment the counter only for valid (stored) defects
-#                                         defect_counter += 1
-#                                 else:
-#                                     pass
-#                             except Exception as e:
-#                                 print(f"Error found: {str(e)}")
-#                                 traceback.print_exc()
-#                                 pass
-#
-#                     def manage_directory(directory_path):
-#                         # Create the directory if it doesn't exist
-#                         if not os.path.exists(directory_path):
-#                             os.makedirs(directory_path)
-#                             print(f"Directory created: {directory_path}")
-#                         else:
-#                             print(f"Directory already exists: {directory_path}")
-#
-#                         # Delete all existing files in the directory
-#                         for filename in os.listdir(directory_path):
-#                             file_path = os.path.join(directory_path, filename)
-#                             try:
-#                                 if os.path.isfile(file_path) or os.path.islink(file_path):
-#                                     os.unlink(file_path)
-#                                 elif os.path.isdir(file_path):
-#                                     shutil.rmtree(file_path)
-#                             except Exception as e:
-#                                 print(f"Failed to delete {file_path}. Reason: {e}")
-#
-#                         print(f"All files deleted from directory: {directory_path}")
-#
-#                     # Print stored submatrices with their coordinates
-#                     print(f"\nTotal submatrices stored: {len(submatrices_dict)}")
-#                     output_dir_def = os.path.join(os.getcwd(), "defect_matrices")
-#                     manage_directory(output_dir_def)
-#                     os.makedirs(output_dir_def, exist_ok=True)
-#                     for (weld_id, defect_id), matrix in submatrices_dict.items():
-#                         filename = f"submatrix_ptt-1{defect_id, start_sensor, start_sensor}.csv"
-#                         filepath = os.path.join(output_dir_def, filename)
-#                         matrix.to_csv(filepath, index=False)
-#                         # print(f"Saved {filename}")
-#
-#                     with connection.cursor() as cursor:
-#                         for i in finial_defect_list:
-#                             runid = i['runid']
-#                             start_index = i['start_reading']
-#                             end_index = i['end_reading']
-#                             start_sensor = i['start_sensor']
-#                             end_sensor = i['end_sensor']
-#                             absolute_distance = round(i['absolute_distance']/1000, 3)
-#                             upstream_oddo1 = round(i['upstream_oddo1']/1000, 3)
-#                             length = round(i['length'])
-#                             Width = round(i['breadth'])
-#                             width_new = round(i['width_new'])
-#                             depth = round(i['depth'])
-#                             orientation = i['orientation']
-#                             dimension_classification = i['dimension_classification']
-#                             defect_type = i['defect_type']
-#                             max_value = round(i['max_value'])
-#                             base_value = round(i['base_value'])
-#                             min_value = round(i['min_value'])
-#                             l_per1 = round(i['l_per1'])
-#                             # l_per2 = round(i['l_per2'])
-#                             # l_per3 = round(i['l_per3'])
-#                             # l_per4 = round(i['l_per4'])
-#                             WT = i['WT']
-#                             speed = round(i['speed'], 2)
-#                             latitude = i['latitude']
-#                             longitude = i['longitude']
-#                             with connection.cursor() as cursor:
-#                                 query_defect_insert = "INSERT into defect_clock_hm(runid, pipe_id, pipe_length, start_index, end_index, start_sensor, end_sensor, upstream, absolute_distance, orientation, length, Width,width_new,depth,max_value, min_value,l_per1, dimension_classification,defect_type, mean_value, WT, speed, latitude, longitude) VALUE(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-#
-#                                 cursor.execute(query_defect_insert, (
-#                                     int(runid), self.Weld_id_tab9, self.pipe_len_oddo1_chm, start_index, end_index,
-#                                     start_sensor, end_sensor, upstream_oddo1, absolute_distance, orientation,
-#                                      length, Width,width_new, depth, max_value, min_value, l_per1, dimension_classification,
-#                                      defect_type, base_value, WT, speed, latitude, longitude))
-#                                 connection.commit()
-#
-#                     def extract_features(row):
-#                         x = np.array(row['submatrix'])
-#
-#                         # Basic stats
-#                         mean = np.mean(x)
-#                         std = np.std(x)
-#                         max_val = np.max(x)
-#                         min_val = np.min(x)
-#
-#                         # FFT features
-#                         fft_vals = np.abs(np.fft.fft(x))
-#                         fft_features = fft_vals[:10]
-#
-#                         # Threshold crossings
-#                         threshold = mean + 2 * std
-#                         threshold_crossings = np.sum(x > threshold)
-#
-#                         # Z-score anomalies
-#                         z_scores = np.abs((x - mean) / (std + 1e-8))
-#                         anomaly_score = np.mean(z_scores > 3)
-#
-#                         # CWT Median Feature using pywt.cwt
-#                         try:
-#                             x = np.array(x)
-#                             if x.ndim == 1:
-#                                 side = int(np.sqrt(len(x)))
-#                                 if side * side != len(x):
-#                                     raise ValueError("Not a perfect square")
-#                                 mat = x.reshape(-1, side)
-#                             else:
-#                                 mat = x
-#                         except:
-#                             mat = np.atleast_2d(x)
-#
-#                         cwt_medians = []
-#                         for row_sig in mat:
-#                             row_sig = np.asarray(row_sig)
-#                             if row_sig.ndim != 1:
-#                                 continue
-#
-#                             N = len(row_sig)
-#                             if N < 5:
-#                                 continue
-#
-#                             signal_std = np.std(row_sig)
-#                             max_scale = min(N // 2, max(3, int(signal_std * 10)))
-#                             if max_scale < 1:
-#                                 continue
-#
-#                             widths = np.arange(1, max_scale + 1)
-#                             if len(widths) < 1:
-#                                 continue
-#
-#                             # ✅ FIXED: use 'gaus1' (not 'guass1') and unpack coeffs and freqs
-#                             coeffs, freqs = cwt(row_sig, widths, 'gaus1')
-#                             row_cwt_median = np.median(np.abs(coeffs))
-#                             cwt_medians.append(row_cwt_median)
-#
-#                         cwt_final = np.median(cwt_medians) if cwt_medians else 0
-#
-#                         return [mean, std, max_val, min_val, threshold_crossings, anomaly_score, cwt_final] + list(fft_features)
-#
-#                     def model_width(model, folder_path):
-#                         query = "select id, speed, start_sensor, end_sensor, width_new from defect_clock_hm"
-#                         df_meta = pd.read_sql_query(query, connection)
-#                         # df_meta.to_csv("df_meta.csv")
-#                         df_meta.rename(columns={'id': 'def_no.', 'width_new': 'pred_width'}, inplace=True)
-#                         df_meta['def_no.'] = df_meta['def_no.'].astype(int)
-#                         meta_dict = {
-#                             int(row['def_no.']): {
-#                                 'speed': float(row['speed']),
-#                                 'Start_sensor': float(row['start_sensor']),
-#                                 'End_sensor': float(row['end_sensor']),
-#                                 'pred_width': float(row['pred_width']),
-#                             }
-#                             for _, row in df_meta.iterrows()
-#                         }
-#
-#                         records = []
-#                         print("🔍 Matching submatrices in:", folder_path)
-#
-#                         for filename in os.listdir(folder_path):
-#                             if filename.endswith('.csv') and filename.startswith("submatrix_ptt-"):
-#                                 match = re.search(r'\((\d+),', filename)
-#                                 if not match:
-#                                     print(f"❌ Skipping (no match): {filename}")
-#                                     continue
-#
-#                                 defect_no = int(match.group(1))
-#
-#                                 if defect_no not in meta_dict:
-#                                     print(f"⚠️ Defect {defect_no} not in metadata, skipping.")
-#                                     continue
-#
-#                                 file_path = os.path.join(folder_path, filename)
-#                                 matrix = pd.read_csv(file_path, dtype=str)
-#                                 matrix = matrix.apply(pd.to_numeric, errors='coerce').fillna(0)
-#
-#                                 flat = matrix.values.flatten().astype(np.float32)
-#                                 flat = (flat - np.mean(flat)) / (np.std(flat) + 1e-8)
-#
-#                                 meta = meta_dict[defect_no]
-#                                 record = {
-#                                     'filename': filename,
-#                                     'def_no.': defect_no,
-#                                     'submatrix': flat.tolist(),
-#                                     'speed': meta['speed'],
-#                                     'Start_sensor': meta['Start_sensor'],
-#                                     'End_sensor': meta['End_sensor'],
-#                                     'pred_width': meta['pred_width'],
-#                                 }
-#
-#                                 records.append(record)
-#                         df_test = pd.DataFrame(records)
-#                         print("✅ Final test dataset shape:", df_test.shape)
-#                         print(df_test.shape)
-#
-#                         if model != None:
-#                             print("Model successfully loaded ")
-#                         else:
-#                             print("error loading model")
-#                         filename = df_test['filename'] if 'filename' in df_test.columns else [f"sample_{i}" for i in
-#                                                                                               range(len(df_test))]
-#                         df_test.drop(columns=['filename'], inplace=True, errors='ignore')
-#                         # df_test['submatrix'] = df_test['submatrix'].apply(lambda s: [float(x) for x in ast.literal_eval(s)])
-#                         features = df_test.apply(extract_features, axis=1, result_type='expand')
-#                         feature_columns = ['mean', 'std', 'max', 'min', 'threshold_crossings', 'anomaly_score',
-#                                            'cwt_median'] + [f'fft_{i}' for i in range(10)]
-#                         features.columns = feature_columns
-#                         print(feature_columns)
-#                         print(filename)
-#                         final_df = pd.concat([features, df_test[['speed', 'Start_sensor', 'End_sensor', 'pred_width']]],
-#                                              axis=1)
-#                         final_df.drop(columns=['std'], inplace=True)
-#                         print(final_df.columns)
-#                         final_df.rename(columns={"End_sensor": "End_Sensor"}, inplace=True)
-#                         # pred = model.predict(final_df)
-#                         pred = np.floor(model.predict(final_df)).astype(int)
-#                         cursor = connection.cursor()
-#                         for defect_no, pred_val in zip(df_test['def_no.'], pred):
-#                             cursor.execute("UPDATE defect_clock_hm SET width_new = %s WHERE id = %s",
-#                                            (int(pred_val), int(defect_no)))
-#                         connection.commit()
-#
-#                     model = joblib.load("C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/rf_width_model.pkl")
-#                     model_width(model, output_dir_def)
-#
-#                     df_new_1 = df_new[[f"{h:02}:{m:02}" for h in range(12) for m in range(0, 60, 5)]]
-
                     fig = figx112
                     self.fig_plot = fig
 
-                    plotly.offline.plot(fig, filename='heatmap_new.html', auto_open=False)
-                    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "heatmap_new.html"))
-                    self.m_output.load(QUrl.fromLocalFile(file_path))
+                    # plotly.offline.plot(fig, filename='../heatmap_new.html', auto_open=False)
+                    # file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../heatmap_new.html"))
+                    html_path = gmfl_path("heatmap_new.html")
+                    print(f"temp html path: {html_path}")
+                    plotly.offline.plot(fig, filename=html_path, auto_open=False)
+                    self.m_output.load(QUrl.fromLocalFile(html_path))
 
                     self.save_as_img(self.fig_plot, self.project_name, self.Weld_id_tab9)
                     Config.print_with_time("End of conversion at : ")
@@ -5987,16 +4641,23 @@ class Ui_MainWindow(QtWidgets.QWidget):
         print(Weld_id)
         # figure = heat_map_obj.
         print("here1")
-        img_path = Config.image_folder + company_name
-        img_name = str(Weld_id) + '.html'
-        # img_name = str(lower_sensitivity + upper_sensitivity) + '.png'
-
-        try:
-            os.makedirs(img_path)
-        except OSError as error:
-            pass
-        print("path", img_path + img_name)
-        heat_map_obj.write_html(img_path + '/' + img_name)
+        # img_path = Config.image_folder + company_name
+        #
+        # img_name = str(Weld_id) + '.html'
+        # # img_name = str(lower_sensitivity + upper_sensitivity) + '.png'
+        #
+        # try:
+        #     os.makedirs(img_path)
+        # except OSError as error:
+        #     pass
+        # print("path", img_path + img_name)
+        img_path = os.path.join(Config.image_folder, company_name)
+        img_name = f"{Weld_id}.html"
+        os.makedirs(img_path, exist_ok=True)
+        full_path = os.path.join(img_path, img_name)
+        full_path = os.path.normpath(full_path)
+        print(f"saving html at : {full_path}")
+        heat_map_obj.write_html(full_path)
         print("here 2")
         # im = Image.open(img_path + '/' + img_name)
         # im1 = im.rotate(360, expand=1)
@@ -6830,7 +5491,23 @@ class Ui_MainWindow(QtWidgets.QWidget):
     """
 ---->Graph tab(8) functions ends here
     """
+    def Graph_app(self):
+        print("Loading GraphApp...")
 
+        try:
+            # Remove any existing widgets from hbox_6_graph
+            while self.hbox_6_graph.count():
+                child = self.hbox_6_graph.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+
+            # Load GraphApp
+            self.graph_app_widget = GraphApp()
+            self.hbox_6_graph.addWidget(self.graph_app_widget)
+            print("GraphApp loaded successfully.")
+
+        except Exception as e:
+            print("Error loading GraphApp:", e)
     """
 ---->Clock calculation starts from here
     """
@@ -7021,31 +5698,31 @@ class Ui_MainWindow(QtWidgets.QWidget):
     #     self.pip_info()
 
 
-    def ShowWeldToPipe(self):
-        with connection.cursor() as cursor:
-            runid = self.runid
-            try:
-                Fetch_pipe_detail = "select id,runid,analytic_id,lower_sensitivity,upper_sensitivity, length, start_index,end_index from pipes where runid = '%s'"
-                # Execute query.
-                cursor.execute(Fetch_pipe_detail, (int(runid)))
-                self.myTableWidget1.setRowCount(0)
-                allSQLRows = cursor.fetchall()
-                if allSQLRows:
-                    for row_number, row_data in enumerate(allSQLRows):
-                        self.myTableWidget1.insertRow(row_number)
-                        for column_num, data in enumerate(row_data):
-                            self.myTableWidget1.setItem(row_number, column_num, QtWidgets.QTableWidgetItem(str(data)))
-                    self.myTableWidget1.setEditTriggers(QAbstractItemView.NoEditTriggers)
-                else:
-                    Config.warning_msg("No record found", "")
-                pipe_id_list = []
-                pipe_id_list.clear()
-                for i in allSQLRows:
-                    pipe_id_list.append(str(i[0]))
-                print("pipe_id_list", pipe_id_list)
-            except:
-                # logger.log_warning("error in show weld to pipe")
-                pass
+    # def ShowWeldToPipe(self):
+    #     with connection.cursor() as cursor:
+    #         runid = self.runid
+    #         try:
+    #             Fetch_pipe_detail = "select id,runid,analytic_id,lower_sensitivity,upper_sensitivity, length, start_index,end_index from pipes where runid = '%s'"
+    #             # Execute query.
+    #             cursor.execute(Fetch_pipe_detail, (int(runid)))
+    #             self.myTableWidget1.setRowCount(0)
+    #             allSQLRows = cursor.fetchall()
+    #             if allSQLRows:
+    #                 for row_number, row_data in enumerate(allSQLRows):
+    #                     self.myTableWidget1.insertRow(row_number)
+    #                     for column_num, data in enumerate(row_data):
+    #                         self.myTableWidget1.setItem(row_number, column_num, QtWidgets.QTableWidgetItem(str(data)))
+    #                 self.myTableWidget1.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    #             else:
+    #                 Config.warning_msg("No record found", "")
+    #             pipe_id_list = []
+    #             pipe_id_list.clear()
+    #             for i in allSQLRows:
+    #                 pipe_id_list.append(str(i[0]))
+    #             print("pipe_id_list", pipe_id_list)
+    #         except:
+    #             # logger.log_warning("error in show weld to pipe")
+    #             pass
 
 
     def viewClicked(self):
@@ -7075,38 +5752,38 @@ class Ui_MainWindow(QtWidgets.QWidget):
     #             return []
 
 
-    def Show_Weld(self):
-        runid = self.runid
-        with connection.cursor() as cursor:
-            try:
-                Fetch_weld_detail = f"select weld_number,runid,analytic_id,sensitivity,length,start_index,end_index,start_oddo1,end_oddo1,start_oddo2,end_oddo2 from welds where runid='%s' and id>{1}"
-                # Execute query.
-                cursor.execute(Fetch_weld_detail, (int(runid)))
-                self.myTableWidget.setRowCount(0)
-                allSQLRows = cursor.fetchall()
-                if allSQLRows:
-                    for row_number, row_data in enumerate(allSQLRows):
-                        self.myTableWidget.insertRow(row_number)
-                        for column_num, data in enumerate(row_data):
-                            self.myTableWidget.setItem(row_number, column_num, QtWidgets.QTableWidgetItem(str(data)))
-                    self.myTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-                else:
-                    Config.warning_msg("No record found", "")
-                weld_id_list = []
-                weld_id_list.clear()
-                for i in allSQLRows:
-                    weld_id_list.append(str(i[0]))
-                print("weld_id_list", weld_id_list)
-                self.combo.addItems(weld_id_list)
-                self.combo_orientation.addItems(weld_id_list)
-                self.combo_box.addItems(weld_id_list)
-                self.combo_graph.addItems(weld_id_list)
-                self.combo_box1.addItems(weld_id_list)
-                self.combo_tab9.addItems(weld_id_list)
-
-            except:
-                # logger.log_error("Fetch Weld Detail has some error")
-                pass
+    # def Show_Weld(self):
+    #     runid = self.runid
+    #     with connection.cursor() as cursor:
+    #         try:
+    #             Fetch_weld_detail = f"select weld_number,runid,analytic_id,sensitivity,length,start_index,end_index,start_oddo1,end_oddo1,start_oddo2,end_oddo2 from welds where runid='%s' and id>{1}"
+    #             # Execute query.
+    #             cursor.execute(Fetch_weld_detail, (int(runid)))
+    #             self.myTableWidget.setRowCount(0)
+    #             allSQLRows = cursor.fetchall()
+    #             if allSQLRows:
+    #                 for row_number, row_data in enumerate(allSQLRows):
+    #                     self.myTableWidget.insertRow(row_number)
+    #                     for column_num, data in enumerate(row_data):
+    #                         self.myTableWidget.setItem(row_number, column_num, QtWidgets.QTableWidgetItem(str(data)))
+    #                 self.myTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    #             else:
+    #                 Config.warning_msg("No record found", "")
+    #             weld_id_list = []
+    #             weld_id_list.clear()
+    #             for i in allSQLRows:
+    #                 weld_id_list.append(str(i[0]))
+    #             print("weld_id_list", weld_id_list)
+    #             self.combo.addItems(weld_id_list)
+    #             self.combo_orientation.addItems(weld_id_list)
+    #             self.combo_box.addItems(weld_id_list)
+    #             self.combo_graph.addItems(weld_id_list)
+    #             self.combo_box1.addItems(weld_id_list)
+    #             self.combo_tab9.addItems(weld_id_list)
+    #
+    #         except:
+    #             # logger.log_error("Fetch Weld Detail has some error")
+    #             pass
     # def WeldToPipe(self):
     #     if Config.no_weld_indicator:
     #         self.weldtoPipe = WeldToPipe.Query(self.runid, 1)
@@ -7379,6 +6056,102 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.erf.triggered.connect(self.Erf)
 
 
+def Width_calculation(start_sensor1, end_sensor1):
+    start_sensor1, end_sensor1 = start_sensor1+1, end_sensor1+1
+    if start_sensor1 > end_sensor1 or start_sensor1 == end_sensor1:
+        return 0
+
+    outer_diameter_1 = Config.outer_dia  # 12-inch pipe
+    thickness_1 = Config.pipe_thickness  # Replace with Config.pipe_thickness if using from config
+    inner_diameter_1 = outer_diameter_1 - 2 * (thickness_1)
+    radius_1 = inner_diameter_1 / 2
+
+    theta_2 = Config.width_angle1               # approximate value for both pipes
+    c_1 = math.radians(theta_2)
+    theta_3 = Config.width_angle2               # approximate value for both pipes
+    d_1 = math.radians(theta_3)
+    theta_4 = Config.width_angle3             # 9.97 for thickness 5.5 and 9.53 for thickness 7.1
+    e_1 = math.radians(theta_4)  # Convert to radians
+    # print("c1, d1", c_1, d_1)
+
+    x1 = round(radius_1 * c_1, 1)
+    y1 = round(radius_1 * d_1, 1)
+    z1 = round(radius_1 * e_1, 1)  # Distance for sensors at multiples of 16
+    print("x1, y1, z1", x1, y1, z1)
+
+    bredth = 0
+    i = start_sensor1
+    while i < end_sensor1:
+        # next_sensor = i + 1
+        next_sensor = i
+        if next_sensor % 16 == 0 and next_sensor != end_sensor1:
+            bredth += z1
+            # print(f"{i} → {next_sensor:<10} z1 (because {next_sensor} is a multiple of 16)")
+        elif next_sensor % 4 == 0:  # If the next sensor is a multiple of 4 (but not 16)
+            bredth += y1
+            # print(f"{i} → {next_sensor:<10} (y1 - x1) (because {next_sensor} is a multiple of 4)")
+        else:
+            bredth += x1
+            # print(f"{i} → {next_sensor:<10} x1")
+        i += 1  # Move to the next sensor
+    return bredth
+
+
+
+def internal_or_external(df_new_proximity, x):
+    sensor_number = x+1
+    if sensor_number % 4 == 0:
+        flapper_no = int(sensor_number / 4)
+    else:
+        flapper_no = int(sensor_number / 4) + 1
+
+    proximity_no = flapper_no % 4
+    if proximity_no == 0:
+        proximity_no = 4
+    proximity_index = 'F' + str(flapper_no) + 'P' + str(proximity_no)
+    print("Proximity_index",proximity_index)
+    maximum_depth_proximity_sensor = df_new_proximity[proximity_index]
+
+    c = maximum_depth_proximity_sensor.tolist()
+    minimum_value_proximity = min(c)
+    mean_value_proximtiy=mean(c)
+
+    print("mean_value_proximtiy", mean_value_proximtiy)
+    print("minimum value of proximity",minimum_value_proximity)
+
+    difference_mean = mean_value_proximtiy - minimum_value_proximity
+
+    print("difference_minimum2", difference_mean)
+    if difference_mean < 5000:
+        type = "Internal"
+        return type
+    else:
+        type = "External"
+        return type
+    # mean_of_proximity = df_new_proximity.mean()
+    # print("mean_of_defect", mean_of_proximity)
+    # average_value_list = mean_of_proximity.values.tolist()
+    # average_value_list = [float(s) for s in average_value_list]
+    # # print("average_value_list", average_value_list)
+    # list_2d = df_new_proximity.values.tolist()
+    # index_1 = 0
+    # compare_list_mean = []
+    # while (index_1 < len(list_2d[0])):
+    #     x2 = []
+    #     for j, value in enumerate(list_2d):
+    #         if list_2d[j][index_1] < average_value_list[index_1]:
+    #             x2.append(list_2d[j][index_1])
+    #     index_1 = index_1 + 1
+    #     mean_value_of_compare_list = mean(x2)
+    #     compare_list_mean.append(mean_value_of_compare_list)
+    # print("compare_list_of_mean", compare_list_mean)
+    # ############# noise_difference_each_proximity_sensore ###############
+    # zip_object_2 = zip(average_value_list, compare_list_mean)
+    # noise_difference_list = []
+    # for list1_4, list2_5 in zip_object_2:
+    #     noise_difference_list.append(list1_4 - list2_5)
+    # print("noise_difference list", noise_difference_list)
+
 def insert_weld_to_db(temp):
     #print("weld_obj", temp)
     """
@@ -7395,6 +6168,49 @@ def insert_weld_to_db(temp):
     except:
         print("Error While Inserting weld for runid ")
 
+def defect_angle_x(roll_x, sensor):
+    roll_angle=list(roll_x)
+    roll_position=roll_angle[0]
+    print("roll_postion and sensor", roll_position, sensor)
+    x = 1.73            ################# x 1.73 for 12 inch and 1.74  for 14 inch pipe #################
+    y = 3.30            ################# y 3.30 for 12 inch and 3.37 for 14 inch pipe #################
+    z = 4.52            ################# z 4.52 for 12 inch and 5.63 for 14 inch pipe #################
+    a = 8.2             ################# a 8.2 for 12 inch and 6.5 for 14 inch pipe #################
+    b = int(sensor / 16)
+    c = b * a
+
+    d = int(sensor / 8)
+    e = d - b
+    f = e * z
+
+    g = int(sensor / 4)
+    h = g - (b + e)
+    i = h * y
+
+    j = sensor * x
+    # roll_position = 0.15
+    initial_calculation_of_each_sensor = c + f + i + j
+    print("a", initial_calculation_of_each_sensor)
+    if roll_position > 0:
+        # print(roll_position)
+        roll_position = roll_position + initial_calculation_of_each_sensor
+        if roll_position > 360:
+            print(roll_position)
+            roll_position = roll_position % 360
+    else:
+        roll_position = 360 + roll_position
+        roll_position = roll_position + initial_calculation_of_each_sensor
+        if roll_position > 360:
+            roll_position = roll_position % 360
+            angle = initial_calculation_of_each_sensor + roll_position
+            print("angle rotation", angle)
+            print("angle", roll_position)
+    adsmd = roll_position / 30
+    k = int(adsmd)
+    m = int(roll_position % 30)
+    g = ':'
+    angle_hr_min = str(k) + g + str(m)
+    return angle_hr_min
 
 def insert_pipe_to_db(pipe_obj):
     """
@@ -7413,7 +6229,6 @@ def insert_pipe_to_db(pipe_obj):
     except:
         print("Error While Inserting weld for runid ")
 
-
 def get_last_pipe(runid, weld_obj, analytic_id):
     """
         This will return the last pipe object to insert into mysql db
@@ -7430,778 +6245,6 @@ def get_last_pipe(runid, weld_obj, analytic_id):
         obj = {"start_index": start_index, "end_index": end_index, "length": length, "analytic_id": analytic_id,
                "runid": runid}
         return obj
-
-
-def ranges(nums):
-    #print("nums",nums)
-    """"
-       This will merge the continues indexes and return a list that will contain list of start_index and end_index
-           :param arr : List of indexes to merge
-       """
-    # gaps_bw_two_value=3
-    # sequences = np.split(nums, np.array(np.where(np.diff(nums) > gaps_bw_two_value)[0]) + 1)
-    # l = []
-    # for s in sequences:
-    #     if len(s) > 1:
-    #         l.append((np.min(s), np.max(s)))
-    #     else:
-    #         pass
-    #         #l.append(s[0])
-    # return l
-
-    try:
-        gaps = [[s, e] for s, e in zip(nums, nums[1:]) if s + 1 < e]
-        edges = iter(nums[:1] + sum(gaps, []) + nums[-1:])
-        return list(zip(edges, edges))
-    except:
-        print("Error while Grouping Index Range for defect")
-
-
-def index_of_occurrences(arr, value):
-    #print(arr)
-    for i, data in enumerate(arr):
-        if i == 128:
-            arr[i] = 0
-        elif i == 129:
-            arr[i] = 0
-        elif i == 130:
-            arr[i] = 0
-        elif i == 131:
-            arr[i] = 0
-    #print(arr)
-    return [i for i, x in enumerate(arr) if x != 0]
-
-
-def dimension_classification(type_of_defect, runid, defect_id):
-    print(type_of_defect, runid)
-    query = f'UPDATE finaldefect SET  Dimensions_classification="{type_of_defect}" WHERE runid="{runid}" and id={defect_id}'
-    with connection.cursor() as cursor:
-        cursor.execute(query)
-        connection.commit()
-#this is repeated function -------------------------------------------------------------------------------------------------------------
-# def get_adaptive_sigma_refinement(length_percent):
-#     """
-#     Get refined sigma multipliers based on 5-part length percentage classification:
-#     1-10%, 10-20%, 20-30%, 30-40%, 40%+
-#     """
-#     if 1 <= length_percent < 10:
-#         sigma_multiplier = 0.6      # Less aggressive for very small defects
-#         refinement_factor = 1.2
-#         classification = "Very Small (1-10%)"
-#     elif 10 <= length_percent < 20:
-#         sigma_multiplier = 0.5      # Slightly more sensitive for small defects
-#         refinement_factor = 0.9
-#         classification = "Small (10-20%)"
-#     elif 20 <= length_percent < 30:
-#         sigma_multiplier = 1.0      # Standard sensitivity
-#         refinement_factor = 1.0
-#         classification = "Medium (20-30%)"
-#     elif 30 <= length_percent < 40:
-#         sigma_multiplier = 1.1      # Slightly less sensitive
-#         refinement_factor = 0.9
-#         classification = "Large (30-40%)"
-#     elif length_percent >= 40:
-#         sigma_multiplier = 1.2      # Less sensitive for largest defects
-#         refinement_factor = 0.8
-#         classification = "Very Large (40%+)"
-#     else:
-#         sigma_multiplier = 0.85
-#         refinement_factor = 1.15
-#         classification = "Below 1%"
-#     return sigma_multiplier, refinement_factor, classification
-
-# def get_type_defect_1(geometrical_parameter,runid,length_defect,width_defect):
-#     L_ratio_W = length_defect / width_defect
-#     if width_defect > 3 * geometrical_parameter and length_defect > 3 * geometrical_parameter:
-#         type_of_defect = 'GENERAL'
-#         return type_of_defect
-#     elif (6 * geometrical_parameter >= width_defect >= 1 * geometrical_parameter and 6 * geometrical_parameter >= length_defect >= 1 * geometrical_parameter) and (
-#             0.5 < (L_ratio_W) < 2) and not (
-#             width_defect >= 3 * geometrical_parameter and length_defect >= 3 * geometrical_parameter):
-#         type_of_defect = 'PITTING'
-#         return type_of_defect
-#     elif (1 * geometrical_parameter <= width_defect < 3 * geometrical_parameter) and (L_ratio_W >= 2):
-#         type_of_defect = 'AXIAL GROOVING'
-#         return type_of_defect
-#     elif L_ratio_W <= 0.5 and 3 * geometrical_parameter > length_defect >= 1 * geometrical_parameter:
-#         type_of_defect = 'CIRCUMFERENTIAL GROOVING'
-#         return type_of_defect
-#     elif 0 < width_defect < 1 * geometrical_parameter and 0 < length_defect < 1 * geometrical_parameter:
-#         type_of_defect = 'PINHOLE'
-#         return type_of_defect
-#     elif 0 < width_defect < 1 * geometrical_parameter and length_defect >= 1 * geometrical_parameter:
-#         type_of_defect = 'AXIAL SLOTTING'
-#         return type_of_defect
-#     elif width_defect >= 1 * geometrical_parameter and 0 < length_defect < 1 * geometrical_parameter:
-#         type_of_defect = 'CIRCUMFERENTIAL SLOTTING'
-#         return type_of_defect
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def get_type_defect(geometrical_parameter, runid):
-    print(geometrical_parameter, runid)
-    with connection.cursor() as cursor:
-        try:
-            Fetch_defect_detail = "select Length, Width, id from finaldefect where runid='%s'"
-            cursor.execute(Fetch_defect_detail, (int(runid)))
-            allSQLRows = cursor.fetchall()
-            print("dhhdhf", allSQLRows)
-            for i in allSQLRows:
-                length_defect = i[0]
-                width_defect = i[1]
-                defect_id = i[2]
-                L_ratio_W = length_defect / width_defect
-                if width_defect >= 3 * geometrical_parameter and length_defect >= 3 * geometrical_parameter:
-                    type_of_defect = 'GENERAL'
-                elif (
-                        6 * geometrical_parameter > width_defect >= 1 * geometrical_parameter and 6 * geometrical_parameter > length_defect >= 1 * geometrical_parameter) and (
-                        0.5 < (L_ratio_W) < 2) and not (
-                        width_defect >= 3 * geometrical_parameter and length_defect >= 3 * geometrical_parameter):
-                    type_of_defect = 'PITTING'
-                elif (1 * geometrical_parameter <= width_defect < 3 * geometrical_parameter) and (L_ratio_W >= 2):
-                    type_of_defect = 'AXIAL GROOVING'
-                elif L_ratio_W <= 0.5 and 3 * geometrical_parameter > length_defect >= 1 * geometrical_parameter:
-                    type_of_defect = 'CIRCUMFERENTIAL GROOVING'
-                elif 0 < width_defect < 1 * geometrical_parameter and 0 < length_defect < 1 * geometrical_parameter:
-                    type_of_defect = 'PINHOLE'
-                elif 0 < width_defect < 1 * geometrical_parameter and length_defect >= 1 * geometrical_parameter:
-                    type_of_defect = 'AXIAL SLOTTING'
-                elif width_defect >= 1 * geometrical_parameter and 0 < length_defect < 1 * geometrical_parameter:
-                    type_of_defect = 'CIRCUMFERENTIAL SLOTTING'
-                dimension_classification(type_of_defect, runid, defect_id)
-        except:
-            # logger.log_error("type of defect is not permissiable value")
-            pass
-
-def extract_raw_defects(arr):
-    #print(arr)
-    list_of_raw_defect = []
-    temp_list = []
-    for i, row in enumerate(arr):
-        #print(row)
-        if len(row) > 0:
-            temp_list.append(i)
-        elif len(temp_list) > 0:
-            list_of_raw_defect.append({"start": temp_list[0], "end": temp_list[-1]})
-            temp_list = []
-
-    if len(temp_list) > 0:
-        list_of_raw_defect.append({"start": temp_list[0], "end": temp_list[-1]})
-        temp_list = []
-    return list_of_raw_defect
-
-
-def calculate_defect(raw_defects, pipe_data, number_of_sensor=144):
-    # TODO pass number of sensor
-    start = raw_defects["start"]
-    end = raw_defects["end"]
-    sensor_index = []
-    for i in range(number_of_sensor):
-        flag = False
-        for row in pipe_data[start:end + 1]:
-            if (row[i] != 0 and row[i]>0):
-                flag = True
-                break
-        if flag:
-            sensor_index.append(i)
-    defects = []
-    index_list = ranges(sensor_index)
-    #print(index_list)
-    for row in index_list:
-        defects.append(
-            {"start_observation": start, "end_observation": end, "start_sensor": row[0], "end_sensor": row[1]})
-    return defects
-    #print("hii")
-
-
-def defect_length_calculator(df_new_proximity, data, defects, oddo1, oddo2, roll, runid, column_means):
-    finial_defect_list = []
-    defect_angle = []
-    for i, defect in enumerate(defects):
-        start, end, start_sensor, end_sensor = defect["start_observation"], defect["end_observation"], defect["start_sensor"], defect["end_sensor"]
-        """
-        Calculate in 12 inch MFL Tool
-        """
-        if start_sensor == end_sensor:
-            pass
-        else:
-            print("..................................................")
-            print("start-end observation",start,end)
-            print("start-end sensor", start_sensor, end_sensor)
-
-            """
-            Calculate Upstream of the defect
-            """
-            upstream_odd2 = oddo2[end]-oddo2[0]
-            #print("upstream_odd2....", upstream_odd2)
-
-            upstream_odd1 = oddo1[end]-oddo1[0]
-            #print("upstream_odd1....", upstream_odd1)
-
-
-            """
-            Calculate length and absolute distance of the defect
-            """
-
-            length = oddo2[end] - oddo2[start]
-
-            absolute_length = oddo2[start]
-            #print("absolute_distance_oddo2....", absolute_length)
-
-            length1 = oddo1[end]-oddo1[start]
-            absolute_length_1 = oddo1[start]
-            #print("absolute_length_oddo1....", absolute_length_1)
-
-            """
-            Calculate latitude and longitude 
-            """
-            long, lat = lat_long(absolute_length_1, runid)
-            print("latitude", lat)
-            print("longitude", long)
-
-            """
-            Calculate Pipe_Thickness 
-            """
-            # pipethickness = pipethick(config)
-
-            pipethickness = Config.pipe_thickness
-
-            """
-            Calculate breadth of the defect
-            """
-
-            # def breadth():
-            #     start_sensor1 = start_sensor+1
-            #     end_sensor1 = end_sensor+1
-            #     if start_sensor1 > end_sensor1:
-            #         bredth = 0
-            #         return bredth
-            #
-            #     else:
-            #         if start_sensor1 == end_sensor1:
-            #             bredth = 0
-            #             return bredth
-            #         else:
-            #             outer_diameter_1 = 324  ############## outer_diametere 324 for 12 inch GMFL
-            #             thickness_1 = 7.1  ################# each pipe thickness can be change old thickness 7.1 ############
-            #             inner_diameter_1 = outer_diameter_1 - 2 * (thickness_1)
-            #             radius_1 = inner_diameter_1 / 2
-            #
-            #             theta_2 = 1.74 ############ sensor to sensor  angle = 1.96 #########
-            #             c_1 = math.radians(theta_2)  ########### c in calculated in radians ########
-            #             theta_3 = 5.63  ########## flapper to flapper angle =10.61 ########
-            #             d_1 = math.radians(theta_3)  ########### d in calculated in radians #####
-            #
-            #             x1 = radius_1 * c_1
-            #             y1 = radius_1 * d_1
-            #             count = 0
-            #             if start_sensor1 == end_sensor1:
-            #                 bredth = 0
-            #                 return bredth
-            #             else:
-            #                 for i in range(start_sensor1, end_sensor1):
-            #                     if i % 16 == 0:
-            #                         count = count + 1
-            #                         k = (y1 - x1) * count
-            #                     else:
-            #                         pass
-            #                 try:
-            #                     l = (end_sensor1 - start_sensor1) * x1
-            #                     bredth = k + l
-            #                     return bredth
-            #                 except:
-            #                     k = 0
-            #                     l = (end_sensor1 - start_sensor1) * x1
-            #                     bredth = k + l
-            #                     return bredth
-
-
-            """
-            Calculate depth of the defect
-            """
-            if (absolute_length > 0):
-                max_value_list, data_observation, data1, a, b = defect_max(data, start, end, start_sensor, end_sensor)
-                #print("data_observation",data_observation)
-                print("max_value_list....", max_value_list)
-                #print("data observation",data_observation[0])
-                """
-                First row get start observation to end observation
-                """
-                #initial_observation_1 = data_observation[0]
-                # initial_observation = []
-                # for b in initial_observation_1:
-                #     initial_observation.append(abs(b))
-                # print("initial_observation", initial_observation)
-                initial_observation_1 = [0 if k1 < 0 else k1 for k1 in data_observation[0]]
-                #
-                #
-                # kx = []
-                # for i2 in range(0, 128):
-                #     if i2 >= a and i2 <= b:
-                #         kx.append(initial_observation_1[i2])
-                #     else:
-                #         kx.append(0)
-                #print("initial_observation", kx)
-
-                """
-                Difference between max_value_list and initial_observation
-                """
-                zip_object = zip(max_value_list, initial_observation_1)
-                difference_list = []
-                for list1_i, list2_i in zip_object:
-                    difference_list.append(list1_i - list2_i)
-
-                difference_list_1 = [0 if k2 < 0 else k2 for k2 in difference_list]
-                print("difference_list1", difference_list_1)
-                """
-                Get max_value_difference_value
-                """
-
-                max_value_difference_value = max(difference_list_1)
-                if max_value_difference_value == 0:
-                    max_value = max(max_value_list)
-                    max_value_difference_index = max_value_list.index(max_value)
-                    print("max_value", max_value)
-                    print("max_value_index", max_value_difference_index)
-                else:
-                    """
-                    Get index max_value_difference_value
-                    """
-                    max_value_difference_index = difference_list.index(max_value_difference_value)
-                    print("max_value_index", max_value_difference_index)
-                    """
-                    Check max_value_list inside the index and get max_value
-                    """
-                    max_value = max_value_list[max_value_difference_index]
-                    print("max_value", max_value)
-
-                    result = []
-                    for sub_list in data1:
-                        try:
-                            result.append(sub_list[max_value_difference_index])
-                        except IndexError:
-                            result.append(None)
-                    print("result....", result)
-
-
-                    q1, q3 = np.percentile(result, [25, 25])
-                    print("q1 q3", q1, q3)
-                    start_point = np.argmax(result > q1)
-                    end_point = len(result) - np.argmax(result[::-1] > q3) - 1
-
-                    index_left_center = start_point + start
-                    index_right_center = end_point + start
-                    oddo_updated_left = oddo1[index_left_center]
-                    oddo_updated_right = oddo1[index_right_center]
-
-                    print("start_point", start_point)
-                    print("end_point", end_point)
-                    print("index_left_center", index_left_center)
-                    print("index_right_center", index_right_center)
-                    print("oddo_updated_left", oddo_updated_left)
-                    print("oddo_updated_right", oddo_updated_right)
-
-                    length = oddo_updated_right - oddo_updated_left
-                    print("length_latest", length)
-
-                    left_value = result[start_point]
-                    right_value = result[end_point]
-                    new_value = min(left_value, right_value)
-
-                    def width_new():
-                        first_sensor = None
-                        last_sensor = None
-                        for index in range(start_sensor, end_sensor + 1):
-                            if new_value < max_value_list[index]:
-                                first_sensor = index if first_sensor is None else first_sensor
-                                last_sensor = index
-
-                        print("left_value", left_value)
-                        print("right_value", right_value)
-                        print("new_value", new_value)
-                        print("first_sensor", first_sensor)
-                        print("last_sensor", last_sensor)
-
-                        outer_diameter_1 = 324  ############## outer_diametere 324 for 12 inch GMFL
-                        thickness_1 = Config.pipe_thickness  ################# each pipe thickness can be change old thickness 7.1 ############
-                        inner_diameter_1 = outer_diameter_1 - 2 * (thickness_1)
-                        radius_1 = inner_diameter_1 / 2
-
-                        theta_2 = 1.73 ############ sensor to sensor  angle = 1.73 #########
-                        c_1 = math.radians(theta_2)  ########### c in calculated in radians ########
-                        theta_3 = 4.52  ########## flapper to flapper angle = 4.52 ########
-                        d_1 = math.radians(theta_3)  ########### d in calculated in radians #####
-
-                        x1 = radius_1 * c_1
-                        y1 = radius_1 * d_1
-                        count = 0
-                        if first_sensor == last_sensor:
-                            breadth = 0
-                            return breadth
-
-                        else:
-                            for i in range(first_sensor, last_sensor):
-                                if i % 4 == 0:
-                                    count = count + 1
-                                    k = (y1 - x1) * count
-                                else:
-                                    pass
-                            try:
-                                l = (last_sensor - first_sensor) * x1
-                                breadth = k + l
-                                return breadth
-                            except:
-                                k = 0
-                                l = (last_sensor - first_sensor) * x1
-                                breadth = k + l
-                                return breadth
-
-                    """
-                    Calculate new_depth of the defect
-
-                    """
-                    print("column_means", column_means)
-                    base_value = column_means[max_value_difference_index]
-                    try:
-                        depth_val = (length / width_new()) * (max_value / base_value)
-
-                        ############ For pipe thickness 7.5 #############
-                        depth = round(((depth_val * 100)/Config.pipe_thickness), 2)
-
-                        ############ For pipe thickness 12.7 #############
-                        # depth = round(((depth_val * 100)/12.7), 2)
-
-                    except:
-                        depth = float(0)
-
-                    print("base_value", base_value)
-                    print("depth", depth)
-
-                    # def evaluate_polynomial(coefficients, x):
-                    #     degree = len(coefficients) - 1
-                    #     result_len = 0
-                    #     for i in range(degree + 1):
-                    #         result_len += coefficients[i] * (x ** (degree - i))
-                    #     return int(result_len)
-
-                    # ans_len = 0
-                    # bredth = width_new()
-                    # new_width = 0
-                    # ans_depth = 0
-                    #
-                    ############# Coefficients of LENGTH for pipe thickness 7.4 ###############
-                    # if int(length) <= 40 and int(length) >= 5:
-                    #     coefficients = [4.72105390e-03, -3.47983873e-01, 8.09750603e+00, -2.56608581e+01]
-                    #     # coefficients = [-1.11935387e-04, 1.13040083e-02, -4.15230050e-01, 6.81264193e+00, -4.67619456e+01, 1.18910052e+02]
-                    #     ans_len =evaluate_polynomial(coefficients, int(length))
-                    # elif int(length) > 40:
-                    #     coefficients = [-2.28129067e-04, 4.01204794e-02, -1.31715742e+00, 3.78883022e+01]
-                    #     # coefficients = [9.25350782e-10, 1.28969128e-07, 1.73778075e-05, 2.21800972e-03, 2.51147511e-01, 2.25391375e+01]
-                    #     ans_len =evaluate_polynomial(coefficients, int(length))
-                    # else:
-                    #     ans_len = int(length)
-
-                    ############# Coefficients of LENGTH for pipe thickness 12.7 ##############
-                    # if int(length) <= 40 and int(length) >= 5:
-                    #     coefficients = [4.72105390e-03, -3.47983873e-01, 8.09750603e+00, -2.56608581e+01]
-                    #     # coefficients = [-1.11935387e-04, 1.13040083e-02, -4.15230050e-01, 6.81264193e+00, -4.67619456e+01, 1.18910052e+02]
-                    #     ans_len =evaluate_polynomial(coefficients, int(length))
-                    # elif int(length) > 40:
-                    #     coefficients = [-2.28129067e-04, 4.01204794e-02, -1.31715742e+00, 3.78883022e+01]
-                    #     # coefficients = [9.25350782e-10, 1.28969128e-07, 1.73778075e-05, 2.21800972e-03, 2.51147511e-01, 2.25391375e+01]
-                    #     ans_len =evaluate_polynomial(coefficients, int(length))
-                    # else:
-                    #     ans_len = int(length)
-
-
-                    ############# Coefficients of WIDTH for pipe thickness 7.4 ###############
-                    # if int(bredth) <= 40 and int(bredth) >= 5:
-                    #     coefficients = [4.72105390e-03, -3.47983873e-01, 8.09750603e+00, -2.56608581e+01]
-                    #     # coefficients = [-1.11935387e-04, 1.13040083e-02, -4.15230050e-01, 6.81264193e+00, -4.67619456e+01, 1.18910052e+02]
-                    #     new_width =evaluate_polynomial(coefficients, int(bredth))
-                    # elif int(bredth) > 40:
-                    #     coefficients = [-2.28129067e-04, 4.01204794e-02, -1.31715742e+00, 3.78883022e+01]
-                    #     # coefficients = [9.25350782e-10, 1.28969128e-07, 1.73778075e-05, 2.21800972e-03, 2.51147511e-01, 2.25391375e+01]
-                    #     new_width =evaluate_polynomial(coefficients, int(bredth))
-                    # else:
-                    #     new_width = int(bredth)
-
-                    ############# Coefficients of WIDTH for pipe thickness 12.7 ##############
-                    # if int(bredth) <= 40 and int(bredth) >= 5:
-                    #     coefficients = [4.72105390e-03, -3.47983873e-01, 8.09750603e+00, -2.56608581e+01]
-                    #     # coefficients = [-1.11935387e-04, 1.13040083e-02, -4.15230050e-01, 6.81264193e+00, -4.67619456e+01, 1.18910052e+02]
-                    #     new_width =evaluate_polynomial(coefficients, int(bredth))
-                    # elif int(length) > 40:
-                    #     coefficients = [-2.28129067e-04, 4.01204794e-02, -1.31715742e+00, 3.78883022e+01]
-                    #     # coefficients = [9.25350782e-10, 1.28969128e-07, 1.73778075e-05, 2.21800972e-03, 2.51147511e-01, 2.25391375e+01]
-                    #     new_width =evaluate_polynomial(coefficients, int(bredth))
-                    # else:
-                    #     new_width = int(bredth)
-
-
-                    ############# Coefficients of DEPTH for pipe thickness 7.4 ###############
-                    # if int(depth) <= 40 and int(depth) >= 5:
-                    #     coefficients = [4.72105390e-03, -3.47983873e-01, 8.09750603e+00, -2.56608581e+01]
-                    #     # coefficients = [-1.11935387e-04, 1.13040083e-02, -4.15230050e-01, 6.81264193e+00, -4.67619456e+01, 1.18910052e+02]
-                    #     ans_depth =evaluate_polynomial(coefficients, int(depth))
-                    # elif int(depth) > 40:
-                    #     coefficients = [-2.28129067e-04, 4.01204794e-02, -1.31715742e+00, 3.78883022e+01]
-                    #     # coefficients = [9.25350782e-10, 1.28969128e-07, 1.73778075e-05, 2.21800972e-03, 2.51147511e-01, 2.25391375e+01]
-                    #     ans_depth =evaluate_polynomial(coefficients, int(depth))
-                    # else:
-                    #     ans_depth = int(depth)
-
-                    ############# Coefficients of DEPTH for pipe thickness 12.7 ##############
-                    # if int(depth) <= 40 and int(depth) >= 5:
-                    #     coefficients = [4.72105390e-03, -3.47983873e-01, 8.09750603e+00, -2.56608581e+01]
-                    #     # coefficients = [-1.11935387e-04, 1.13040083e-02, -4.15230050e-01, 6.81264193e+00, -4.67619456e+01, 1.18910052e+02]
-                    #     ans_depth =evaluate_polynomial(coefficients, int(depth))
-                    # elif int(depth) > 40:
-                    #     coefficients = [-2.28129067e-04, 4.01204794e-02, -1.31715742e+00, 3.78883022e+01]
-                    #     # coefficients = [9.25350782e-10, 1.28969128e-07, 1.73778075e-05, 2.21800972e-03, 2.51147511e-01, 2.25391375e+01]
-                    #     ans_depth =evaluate_polynomial(coefficients, int(depth))
-                    # else:
-                    #     ans_depth = int(depth)
-
-
-                    # print("new length", ans_len)
-                    # print("new width", new_width)
-                    # print("new depth", ans_depth)
-
-
-                each_holl_sensor = []
-                for i in range(len(data1)):
-                    """
-                    Retrieving column data using sensor no or max_value_difference_index
-                    """
-                    each_holl_sensor.append(abs(data1[i][max_value_difference_index]))
-
-                """
-                Match index list
-                """
-                max_value_observation_index = []
-                for j, match_data_value in enumerate(each_holl_sensor):
-                    """
-                    Retrieving index match the max_value and match_data_value
-                    """
-                    if match_data_value == max_value:
-                        max_value_observation_index.append(j)
-                    """
-                    Index list get first index
-                    """
-                # print("max_value_observation_index",max_value_observation_index[0])
-                depth_percentage_higher_value = max_value
-                print("depth_percentage_higher_value", depth_percentage_higher_value)
-                roll_position = roll[max_value_observation_index[0]]
-                # print(depth_percentage_higher_value)
-                print("roll position", roll_position)
-
-                #################### sensor number ##########
-                sensor_number = max_value_difference_index
-                sensor_number = sensor_number + 1
-                #print("start sensor: end sensor", a, b)
-                #print("maxiumum depth of the sensor", sensor_number)
-
-                """
-                Internal and External defect calculation
-                """
-                mean_of_pipe_wise = df_new_proximity.mean()
-                #print("mean_of_pipe_wise.......",mean_of_pipe_wise)
-                average_value_list = mean_of_pipe_wise.values.tolist()
-                average_value_list = [float(s) for s in average_value_list]
-                #print("average_value_list", average_value_list)
-                list_2d = df_new_proximity.values.tolist()
-                index_1 = 0
-                compare_list_mean = []
-                while (index_1 < len(list_2d[0])):
-                    x2 = []
-                    for j, value in enumerate(list_2d):
-                        if list_2d[j][index_1] <= average_value_list[index_1]:
-                            x2.append(list_2d[j][index_1])
-                    index_1 = index_1 + 1
-                    #print("greater than aur equel average value",x2)
-                    mean_value_of_compare_list = mean(x2)
-                    compare_list_mean.append(mean_value_of_compare_list)
-                print("compare_list_of_mean", compare_list_mean)
-
-                """
-                Noise difference each proximity sensor
-                """
-                zip_object_2 = zip(average_value_list, compare_list_mean)
-                noise_difference_list = []
-                for list1_4, list2_5 in zip_object_2:
-                    noise_difference_list.append(list1_4 - list2_5)
-                print("noise_difference list", noise_difference_list)
-
-                if sensor_number % 4 == 0:
-                    flapper_no = int(sensor_number/4)
-                else:
-                    flapper_no = int(sensor_number/4)+1
-                proximity_no = flapper_no % 4
-                if proximity_no == 0:
-                    proximity_no = 4
-                proximity_index = 'F'+str(flapper_no)+'P'+str(proximity_no)
-                #print("proximity_index",proximity_index)
-                b = df_new_proximity[start:end]
-                #print("start_end_dataframe",b)
-                proximity_one_column = b[proximity_index]
-                c = proximity_one_column.values.tolist()
-                # initial=c[0]
-                # print("initial",initial)
-                minimum_value_proximity = min(c)
-                #print("minimum_value_proximity",minimum_value_proximity)
-
-                single_proximity_average_value = compare_list_mean[int(flapper_no-1)]
-                #print("single_proximity_average_value",single_proximity_average_value)
-
-                if single_proximity_average_value > minimum_value_proximity:
-                    type = "Internal"
-                else:
-                    type = "External"
-                """
-                End of Internal and External Defect
-                """
-
-                """
-                Calculate orienatation hr:min:sec
-                """
-                sensor = sensor_number
-                x = 1.59  ###### sensor to sensor angle between(x) 2.52 ex:1-2,2-3,3-4,5-6,6-7,7-8 ######
-                y = 1.44  ######### flapper first sensor to flapper second first sensor ex:4-5,8-9,12-13,16-17 #####
-                z = 2.71  ######## second flapper to 3 flapper angle ###########
-                a = 9.08  ##### arm to arm angle ##############################
-                b = int(sensor / 16)
-                c = b * a
-                d = int(sensor / 8)
-                e = d - b
-                f = e * z
-                g = int(sensor / 4)
-                h = g - (b + e)
-                k = h * y
-                l = sensor * x
-
-                initial_calculation_of_each_sensor = (c + f + k + l)
-
-                if roll_position > 0:
-                    roll_position = roll_position + initial_calculation_of_each_sensor
-                    if roll_position > 360:
-                        roll_position = roll_position % 360
-                else:
-                    roll_position = 360 + roll_position
-                    roll_position = roll_position + initial_calculation_of_each_sensor
-                    if roll_position > 360:
-                        roll_position = roll_position % 360
-                    # angle = initial_calculation_of_each_sensor + roll_position
-                    # print("angle rotation",angle)
-                # print("angle", roll_position)
-                h = roll_position / 30
-                k = int(h)
-                m = roll_position % 30
-                minute = round(m)
-                g = ':'
-                angle_hr_min = str(k) + g + str(minute)
-                # print(angle_hr_min)
-                """
-                End of Orientation
-                """
-                finial_defect_list.append({**defect, "start_index_q1": index_left_center, "end_index_q2": index_right_center,
-                                           "angle": roll_position, "depth": depth, "defect_type": type,
-                                           "length": length, "breadth": width_new(), "absolute_distance": absolute_length,
-                                           "length_odd1": length1, "absolute_distance_oddo1": absolute_length_1,
-                                           "sensor_no": sensor_number, "angle_hr_m": angle_hr_min, "defect_classification": "ex",
-                                           "latitude": lat, "longitude": long, "pipe_thickness": pipethickness,
-                                           "upstream_oddo1": upstream_odd1, "upstream_oddo2": upstream_odd2}) # TODO calculate breadth(same flapper or not)
-    return finial_defect_list
-
-
-def pipethick(config):
-    tup1 = (
-        "F1H1", "F1H2", "F1H3", "F1H4", "F2H1", "F2H2", "F2H3", "F2H4", "F3H1", "F3H2", "F3H3", "F3H4", "F4H1", "F4H2",
-        "F4H3", "F4H4",
-        "F5H1", "F5H2", "F5H3", "F5H4", "F6H1", "F6H2", "F6H3", "F6H4", "F7H1", "F7H2", "F7H3", "F7H4", "F8H1", "F8H2",
-        "F8H3", "F8H4",
-        "F9H1", "F9H2", "F9H3", "F9H4", "F10H1", "F10H2", "F10H3", "F10H4", "F11H1", "F11H2", "F11H3", "F11H4", "F12H1",
-        "F12H2", "F12H3", "F12H4",
-        "F13H1", "F13H2", "F13H3", "F13H4", "F14H1", "F14H2", "F14H3", "F14H4", "F15H1", "F15H2", "F15H3", "F15H4",
-        "F16H1", "F16H2", "F16H3", "F16H4",
-        "F17H1", "F17H2", "F17H3", "F17H4", "F18H1", "F18H2", "F18H3", "F18H4", "F19H1", "F19H2", "F19H3", "F19H4",
-        "F20H1", "F20H2", "F20H3", "F20H4",
-        "F21H1", "F21H2", "F21H3", "F21H4", "F22H1", "F22H2", "F22H3", "F22H4", "F23H1", "F23H2", "F23H3", "F23H4",
-        "F24H1", "F24H2", "F24H3", "F24H4",
-        "F25H1", "F25H2", "F25H3", "F25H4", "F26H1", "F26H2", "F26H3", "F26H4", "F27H1", "F27H2", "F27H3", "F27H4",
-        "F28H1", "F28H2", "F28H3", "F28H4",
-        "F29H1", "F29H2", "F29H3", "F29H4", "F30H1", "F30H2", "F30H3", "F30H4", "F31H1", "F31H2", "F31H3", "F31H4",
-        "F32H1", "F32H2", "F32H3", "F32H4"
-        "F33H1", "F33H2", "F33H3", "F33H4", "F34H1", "F34H2", "F34H3", "F34H4", "F35H1", "F35H2", "F35H3", "F35H4",
-        "F36H1", "F36H2", "F36H3", "F36H4")
-
-#########################choose ###############################################################
-    f = json.loads(open('E:/MFL_desktop_web/mfl_10_inch_desktop/utils/pipe_60_base.json').read())
-    # g = json.loads(open('C:/Users/admin/PycharmProjects/mfl_10_inch_desktop/utils/pipe_198_base.json').read())
-    h = json.loads(open('E:/MFL_desktop_web/mfl_10_inch_desktop/utils/pipe_69_base.json').read())
-    #print(f,h)
-    thick_avg = []
-    count = [0, 0]
-    #print(f)
-    #print(h)
-    for i, data in enumerate(f):
-        for j, data1 in enumerate(h):
-            if i == j:
-                a = (round(float(f[data])) + round(float(h[data1]))) / 2
-                thick_avg.append(a)
-                # print(1,j,data,data1)
-                if a <= round(float(config[tup1[i]])):
-                    count[0] = count[0] + 1
-                else:
-                    count[1] = count[1] + 1
-                # print(count)
-    #print(count)
-    if count[0] > count[1]:
-        return 6.35
-    elif count[0] < count[1]:
-        return 9.27
-    else:
-        return 0
-
-def insert_defect_into_db(finial_defects, runid, pipe_id, lower_sensitivity, upper_sensitivity):
-    # print("final_defects", finial_defects)
-    with connection.cursor() as cursor:
-        same_lw_up_check = cursor.execute('SELECT pipe_id,lower_sensitivity,upper_sensitivity from defect_sensor_hm where pipe_id="' + str(pipe_id) + '" and lower_sensitivity="' + str(lower_sensitivity) + '" and upper_sensitivity="' + str(upper_sensitivity) + '"')
-        if same_lw_up_check:
-            return 'HII'
-    for i in finial_defects:
-        start_observation = i['start_observation']
-        end_observation = i['end_observation']
-        start_index_q1 = i['start_index_q1']
-        end_index_q2 = i['end_index_q2']
-        start_sensor = i['start_sensor']
-        end_sensor = i['end_sensor']
-        sensor_no = i['sensor_no']
-        angle = i['angle']
-        angle_hr_min = i['angle_hr_m']
-        length = round(i['length'])
-        length_odd1 = round(i['length_odd1'])
-        absolute_distance_odd1 = round(i['absolute_distance_oddo1'])
-        depth = i['depth']
-        defect_type = i['defect_type']
-        defect_classification = i['defect_classification']
-        breadth = round(i['breadth'])
-        absolute_distance = round(i['absolute_distance'])
-        pipe_thickness = i['pipe_thickness']
-        type = 'system'
-        latitude = i['latitude']
-        longitude = i['longitude']
-        upstream_oddo1 = round(i['upstream_oddo1'])
-        upstream_oddo2 = round(i['upstream_oddo2'])
-        with connection.cursor() as cursor:
-            query_defect_insert = "INSERT into defect_sensor_hm (runid, pipe_id, start_observation, end_observation, start_index_q1, end_index_q2, start_sensor, end_sensor, sensor_no, angle, angle_hr_m, length, breadth, depth,defect_type, type, lower_sensitivity, upper_sensitivity, absolute_distance, defect_classification, length_odd1, absolute_distance_oddo1, latitude, longitude, pipe_thickness,upstream_oddo1,upstream_oddo2) VALUE(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-
-            cursor.execute(query_defect_insert, (
-                int(runid), pipe_id, start_observation, end_observation, start_index_q1, end_index_q2, start_sensor, end_sensor, sensor_no, angle, angle_hr_min, length,
-                breadth, depth, defect_type, type, lower_sensitivity, upper_sensitivity, absolute_distance, defect_classification, length_odd1,
-                absolute_distance_odd1, latitude, longitude, pipe_thickness, upstream_oddo1, upstream_oddo2))
-
-            connection.commit()
-
 
 def lat_long(absolute_length, runid):
     with connection.cursor() as cursor:
@@ -8264,313 +6307,45 @@ def lat_long(absolute_length, runid):
     return None, None  # If no match is found, return (None, None)
 
 
-# def lat_long(absolute_length):
-#     dict = {
-#             'id': [1, 2, 3, 4],
-#
-#             'runid': [14, 14, 14, 14],
-#
-#             'pipe_id': [2, 2, 3, 4],
-#
-#             'start_index': [11042, 18329, 25577, 40088],
-#
-#             'absolute_distance_oddo1': [2.811999999999898, 2946.7119999999995, 5969.911, 12054.15],
-#
-#             'Latitude': [16.62374724, 16.62371681, 16.62368934, 16.62368959],
-#
-#             'Longitude': [82.35859973, 82.35861139, 82.35858726, 82.35858762]
-#         }
-#
-#     b = dict['absolute_distance_oddo1']
-#     for j, data in enumerate(b):
-#         if absolute_length < data:
-#             print("first:", dict['Latitude'][j])
-#             print("first:", dict['Longitude'][j])
-#             print("first1 oddo:", data)
-#             return (dict['Longitude'][j],dict['Latitude'][j])
-#             break
-#         ################ lies between absolute distance #############
-#         elif data < absolute_length and b[j + 1] > absolute_length:
-#             print("first1:", dict['Latitude'][j])
-#             print("first1:", dict['Longitude'][j])
-#             print("first1 oddo:", data)
-#             print("second1:", dict['Latitude'][j + 1])
-#             print("second1:", dict['Longitude'][j + 1])
-#             print("second1 oddo:", b[j + 1])
-#             A = data
-#             B = b[j + 1]
-#             C = absolute_length
-#             m = C - A
-#             n = B - C
-#             x1 = ((m * dict['Longitude'][j + 1]) + (n * dict['Longitude'][j])) / (m + n)
-#             y1 = ((m * dict['Latitude'][j + 1]) + (n * dict['Latitude'][j])) / (m + n)
-#             # print("F Longitude:", x1)
-#             # print("F Latitude:", y1)
-#             return (x1, y1)
-#             break
-#         elif absolute_length > b[j + 1]:
-#             if j == len(b) - 2:
-#                 print("first2:", dict['Latitude'][j + 1])
-#                 print("first2:", dict['Longitude'][j + 1])
-#                 print("first2 oddo:", b[j + 1])
-#                 return (dict['Longitude'][j + 1],dict['Latitude'][j + 1])
-#                 break
-
-
-def internal_or_external(df_new_proximity, x):
-    sensor_number = x+1
-    if sensor_number % 4 == 0:
-        flapper_no = int(sensor_number / 4)
-    else:
-        flapper_no = int(sensor_number / 4) + 1
-
-    proximity_no = flapper_no % 4
-    if proximity_no == 0:
-        proximity_no = 4
-    proximity_index = 'F' + str(flapper_no) + 'P' + str(proximity_no)
-    print("Proximity_index",proximity_index)
-    maximum_depth_proximity_sensor = df_new_proximity[proximity_index]
-
-    c = maximum_depth_proximity_sensor.tolist()
-    minimum_value_proximity = min(c)
-    mean_value_proximtiy=mean(c)
-
-    print("mean_value_proximtiy", mean_value_proximtiy)
-    print("minimum value of proximity",minimum_value_proximity)
-
-    difference_mean = mean_value_proximtiy - minimum_value_proximity
-
-    print("difference_minimum2", difference_mean)
-    if difference_mean < 5000:
-        type = "Internal"
-        return type
-    else:
-        type = "External"
-        return type
-    # mean_of_proximity = df_new_proximity.mean()
-    # print("mean_of_defect", mean_of_proximity)
-    # average_value_list = mean_of_proximity.values.tolist()
-    # average_value_list = [float(s) for s in average_value_list]
-    # # print("average_value_list", average_value_list)
-    # list_2d = df_new_proximity.values.tolist()
-    # index_1 = 0
-    # compare_list_mean = []
-    # while (index_1 < len(list_2d[0])):
-    #     x2 = []
-    #     for j, value in enumerate(list_2d):
-    #         if list_2d[j][index_1] < average_value_list[index_1]:
-    #             x2.append(list_2d[j][index_1])
-    #     index_1 = index_1 + 1
-    #     mean_value_of_compare_list = mean(x2)
-    #     compare_list_mean.append(mean_value_of_compare_list)
-    # print("compare_list_of_mean", compare_list_mean)
-    # ############# noise_difference_each_proximity_sensore ###############
-    # zip_object_2 = zip(average_value_list, compare_list_mean)
-    # noise_difference_list = []
-    # for list1_4, list2_5 in zip_object_2:
-    #     noise_difference_list.append(list1_4 - list2_5)
-    # print("noise_difference list", noise_difference_list)
-
-
-def defect_angle_x(roll_x, sensor):
-    roll_angle=list(roll_x)
-    roll_position=roll_angle[0]
-    print("roll_postion and sensor", roll_position, sensor)
-    x = 1.73            ################# x 1.73 for 12 inch and 1.74  for 14 inch pipe #################
-    y = 3.30            ################# y 3.30 for 12 inch and 3.37 for 14 inch pipe #################
-    z = 4.52            ################# z 4.52 for 12 inch and 5.63 for 14 inch pipe #################
-    a = 8.2             ################# a 8.2 for 12 inch and 6.5 for 14 inch pipe #################
-    b = int(sensor / 16)
-    c = b * a
-
-    d = int(sensor / 8)
-    e = d - b
-    f = e * z
-
-    g = int(sensor / 4)
-    h = g - (b + e)
-    i = h * y
-
-    j = sensor * x
-    # roll_position = 0.15
-    initial_calculation_of_each_sensor = c + f + i + j
-    print("a", initial_calculation_of_each_sensor)
-    if roll_position > 0:
-        # print(roll_position)
-        roll_position = roll_position + initial_calculation_of_each_sensor
-        if roll_position > 360:
-            print(roll_position)
-            roll_position = roll_position % 360
-    else:
-        roll_position = 360 + roll_position
-        roll_position = roll_position + initial_calculation_of_each_sensor
-        if roll_position > 360:
-            roll_position = roll_position % 360
-            angle = initial_calculation_of_each_sensor + roll_position
-            print("angle rotation", angle)
-            print("angle", roll_position)
-    adsmd = roll_position / 30
-    k = int(adsmd)
-    m = int(roll_position % 30)
-    g = ':'
-    angle_hr_min = str(k) + g + str(m)
-    return angle_hr_min
-
-
-def Width_calculation(start_sensor1, end_sensor1):
-    start_sensor1, end_sensor1 = start_sensor1+1, end_sensor1+1
-    if start_sensor1 > end_sensor1 or start_sensor1 == end_sensor1:
-        return 0
-
-    outer_diameter_1 = Config.outer_dia  # 12-inch pipe
-    thickness_1 = Config.pipe_thickness  # Replace with Config.pipe_thickness if using from config
-    inner_diameter_1 = outer_diameter_1 - 2 * (thickness_1)
-    radius_1 = inner_diameter_1 / 2
-
-    theta_2 = Config.width_angle1               # approximate value for both pipes
-    c_1 = math.radians(theta_2)
-    theta_3 = Config.width_angle2               # approximate value for both pipes
-    d_1 = math.radians(theta_3)
-    theta_4 = Config.width_angle3             # 9.97 for thickness 5.5 and 9.53 for thickness 7.1
-    e_1 = math.radians(theta_4)  # Convert to radians
-    # print("c1, d1", c_1, d_1)
-
-    x1 = round(radius_1 * c_1, 1)
-    y1 = round(radius_1 * d_1, 1)
-    z1 = round(radius_1 * e_1, 1)  # Distance for sensors at multiples of 16
-    print("x1, y1, z1", x1, y1, z1)
-
-    bredth = 0
-    i = start_sensor1
-    while i < end_sensor1:
-        # next_sensor = i + 1
-        next_sensor = i
-        if next_sensor % 16 == 0 and next_sensor != end_sensor1:
-            bredth += z1
-            # print(f"{i} → {next_sensor:<10} z1 (because {next_sensor} is a multiple of 16)")
-        elif next_sensor % 4 == 0:  # If the next sensor is a multiple of 4 (but not 16)
-            bredth += y1
-            # print(f"{i} → {next_sensor:<10} (y1 - x1) (because {next_sensor} is a multiple of 4)")
-        else:
-            bredth += x1
-            # print(f"{i} → {next_sensor:<10} x1")
-        i += 1  # Move to the next sensor
-    return bredth
-
-    # if start_sensor1 > end_sensor1:
-    #     bredth = 0
-    #     return bredth
-    #
-    # else:
-    #     if start_sensor1 == end_sensor1:
-    #         bredth = 0
-    #         return bredth
-    #     else:
-    #         outer_diameter_1 = 324                     ################# outer_diametere 324 for 12 inch and 355 for 14 inch pipe #################
-    #         thickness_1 = Config.pipe_thickness        ################# each pipe thickness can be change old thickness 6.4 ############
-    #         inner_diameter_1 = outer_diameter_1 - 2 * (thickness_1)
-    #         radius_1 = inner_diameter_1 / 2
-    #
-    #         theta_2 = 1.73              ################# theta_2 1.73 for 12 inch and 1.74 for 14 inch pipe - (sensor to sensor) #################
-    #         c_1 = math.radians(theta_2)  ########### c in calculated in radians ########
-    #         theta_3 = 3.3              ################# theta_3 4.52 for 12 inch and 5.63 for 14 inch pipe - (flapper to flapper)  #################
-    #         d_1 = math.radians(theta_3)  ########### d in calculated in radians #####
-    #
-    #         x1 = radius_1 * c_1  ###### sensor to sensor angle between(x) 1.58 ex:1-2,2-3,3-4,5-6,6-7,7-8 ######
-    #         y1 = radius_1 * d_1
-    #         # print("sensor to sensor length", x1)
-    #         # print("falpper within sensor to next flapper sensor length", y1)
-    #         count = 0
-    #         if start_sensor1 == end_sensor1:
-    #             bredth = 0
-    #             return bredth
-    #         else:
-    #             for i in range(start_sensor1, end_sensor1):
-    #                 if i % 4 == 0:
-    #                     count = count + 1
-    #                     k = (y1 - x1) * count
-    #                 else:
-    #                     pass
-    #             try:
-    #                 l = (end_sensor1 - start_sensor1) * x1
-    #                 bredth = k + l
-    #                 return bredth
-    #             except:
-    #                 k = 0
-    #                 l = (end_sensor1 - start_sensor1) * x1
-    #                 bredth = k + l
-    #                 return bredth
-
-
-def defect_max(data, start, end, a, b):
-    data_observation = []
-    max = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    data1 = data[start:end]
-    # df=pd.DataFrame(data1)
-    # df.to_csv('E:/MFL_10_Inch/mfl_10_inch_desktop/a.csv')
-    for row in data1:
-        data_observation.append(row)
-        for y, data2 in enumerate(row):
-            """
-            Check data range b/w start_sensor=a and end_sensor=b
-            """
-            if y > a - 1 and y < b + 1:
-                if data2 >= max[y]:
-                    max[y] = data2
-    return (max, data_observation, data1, a, b)
-
-# def sensor_number(p,max_value):
-#     print(p,max_value)
-#     for t, dat in enumerate(p):
-#         if p[t] == max_value:
-#             sensor_number = t
-#     return sensor_number
-
-def get_defect_list_from_db(runid, pipe_id):
-    # runid = self.runid
-    # pipe_id = self.pipe_id
-    defects = []
+def get_type_defect(geometrical_parameter, runid):
+    print(geometrical_parameter, runid)
     with connection.cursor() as cursor:
         try:
-            Fetch_weld_detail = "select * from defect_sensor_hm where runid='%s' and pipe_id='%s'"
-            # Execute query.
-            cursor.execute(Fetch_weld_detail, (int(runid), int(pipe_id)))
+            Fetch_defect_detail = "select Length, Width, id from finaldefect where runid='%s'"
+            cursor.execute(Fetch_defect_detail, (int(runid)))
             allSQLRows = cursor.fetchall()
-            for row in allSQLRows:
-                # print(row[3])
-                defects.append([row[3], row[4], row[5], row[6]])
-                # if row[11] == 'manual':
-                #     self.reset_defect_pushButton.show()
-
-            return defects
+            print("dhhdhf", allSQLRows)
+            for i in allSQLRows:
+                length_defect = i[0]
+                width_defect = i[1]
+                defect_id = i[2]
+                L_ratio_W = length_defect / width_defect
+                if width_defect >= 3 * geometrical_parameter and length_defect >= 3 * geometrical_parameter:
+                    type_of_defect = 'GENERAL'
+                elif (
+                        6 * geometrical_parameter > width_defect >= 1 * geometrical_parameter and 6 * geometrical_parameter > length_defect >= 1 * geometrical_parameter) and (
+                        0.5 < (L_ratio_W) < 2) and not (
+                        width_defect >= 3 * geometrical_parameter and length_defect >= 3 * geometrical_parameter):
+                    type_of_defect = 'PITTING'
+                elif (1 * geometrical_parameter <= width_defect < 3 * geometrical_parameter) and (L_ratio_W >= 2):
+                    type_of_defect = 'AXIAL GROOVING'
+                elif L_ratio_W <= 0.5 and 3 * geometrical_parameter > length_defect >= 1 * geometrical_parameter:
+                    type_of_defect = 'CIRCUMFERENTIAL GROOVING'
+                elif 0 < width_defect < 1 * geometrical_parameter and 0 < length_defect < 1 * geometrical_parameter:
+                    type_of_defect = 'PINHOLE'
+                elif 0 < width_defect < 1 * geometrical_parameter and length_defect >= 1 * geometrical_parameter:
+                    type_of_defect = 'AXIAL SLOTTING'
+                elif width_defect >= 1 * geometrical_parameter and 0 < length_defect < 1 * geometrical_parameter:
+                    type_of_defect = 'CIRCUMFERENTIAL SLOTTING'
+                dimension_classification(type_of_defect, runid, defect_id)
         except:
-            # logger.log_error("Error during fetching defects from db for runid = " + runid)
-            return []
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
-    sys.exit(app.exec_())
-    # app.exec_()
+            # logger.log_error("type of defect is not permissiable value")
+            pass
 
 
-
-# if __name__ == "__main__":
-#     print("✅ Entering main GUI loop...")
-#     window = QtWidgets.QMainWindow()
-#     window.setWindowTitle("GMFL 12-Inch Desktop")
-#     window.resize(800, 600)
-#     label = QLabel("GUI started successfully!", alignment=Qt.AlignCenter)
-#     window.setCentralWidget(label)
-#     window.show()
-#
-#     # Run the app loop
-#     exit_code = app.exec_()
-#     print("✅ Exited event loop, exit code =", exit_code)
-
-
-
-
+def dimension_classification(type_of_defect, runid, defect_id):
+    print(type_of_defect, runid)
+    query = f'UPDATE finaldefect SET  Dimensions_classification="{type_of_defect}" WHERE runid="{runid}" and id={defect_id}'
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        connection.commit()

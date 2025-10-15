@@ -36,7 +36,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
 
-import Components.update_form as formComponent
+import GMFL_12_Inch_Desktop.Tabs.update_tab_1.widgets.update_form as formComponent
 import Components.graph as graph
 import Components.style1 as Style
 # import Components.logger as logger
@@ -4541,7 +4541,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
 
                    # model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/models WT5.5new_model.pkl'
                    #  model_path = 'C:/Users/admin/PycharmProjects/GMFL_12_Inch_Desktop/rf_width_model.pkl'
-                    model_path = r'F:\work_new\backend_software\GMFL_12_Inch_Desktop\models WT5.5\ML_MODEL_PKL\rf_width_model.pkl'
+                    model_path = r'/GMFL_12_Inch_Desktop/backend_data/models WT5.5\ML_MODEL_PKL\rf_width_model.pkl'
 
                     model = joblib.load(model_path)  # ✅ Load actual model object
                     model_width(model, output_dir)

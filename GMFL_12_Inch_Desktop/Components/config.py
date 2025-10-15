@@ -12,7 +12,7 @@ from google.cloud import bigquery
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 xyz = QWebEngineView
 no_weld_indicator = False
-connection = pymysql.connect(host='localhost', user='root', password='anubhav', db='gmfldesktop12')
+connection = pymysql.connect(host='localhost', user='root', password='byy184', db='gmfldesktop12')
 credentials = service_account.Credentials.from_service_account_file('./utils/Authorization.json')
 storage_client = storage.Client.from_service_account_json('./utils/GCS_Auth.json')
 sensor_values = json.loads(open('./utils/sensor_value_update.json').read())
@@ -45,10 +45,21 @@ w_per_1 = 0.55
 oddo1_ref = 0
 div_factor = 1.15
 slope_per = 0.65
-weld_pipe_pkl = os.getcwd() + '/DataFrames1/'
-clock_pkl = os.getcwd() + '/ClockDataFrames/'
-roll_pkl_lc = os.getcwd() + '/DataFrames_rollLC/'
-image_folder = os.getcwd() + '/Charts/'
+# weld_pipe_pkl = os.getcwd() + '/DataFrames1/'
+# clock_pkl = os.getcwd() + '/ClockDataFrames/'
+# roll_pkl_lc = os.getcwd() + '/DataFrames_rollLC/'
+# image_folder = os.getcwd() + '/Charts/'
+
+# weld_pipe_pkl = os.path.join(os.getcwd(), 'backend_data', 'DataFrames1') + '/'
+# clock_pkl     = os.path.join(os.getcwd(), 'backend_data', 'ClockDataFrames') + '/'
+# roll_pkl_lc   = os.path.join(os.getcwd(), 'backend_data', 'DataFrames_rollLC') + '/'
+# image_folder  = os.path.join(os.getcwd(), 'backend_data', 'Charts') + '/'
+
+weld_pipe_pkl = os.path.join(os.getcwd(), 'backend_data', 'data_generated', 'DataFrames1') + '/'
+clock_pkl     = os.path.join(os.getcwd(), 'backend_data', 'data_generated', 'ClockDataFrames') + '/'
+roll_pkl_lc   = os.path.join(os.getcwd(), 'backend_data', 'data_generated', 'DataFrames_rollLC') + '/'
+image_folder  = os.path.join(os.getcwd(), 'backend_data', 'data_generated', 'Charts') + '/'
+
 """ <!----------    Different length percentages but not stored in db, only in front    ----------!>    """
 l_per_2 = 0.74                              ##### 26% length percentage in clock heatmap calculation #####
 l_per_3 = 0.72                              ##### 28% length percentage in clock heatmap calculation #####
