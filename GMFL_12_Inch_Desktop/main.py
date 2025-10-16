@@ -38,12 +38,14 @@ import matplotlib.pyplot as plt
 import GMFL_12_Inch_Desktop.Tabs.update_tab_1.widgets.update_form as formComponent
 import Components.graph as graph
 import Components.style as Style
+import Components.style1 as Style1
 # import Components.logger as logger
 import Components.config as Config
 import Components.CreateProject as CreateProject
 import Components.endcounter_to_startcounter_distance as endcounter_to_startcounter_distance
 import Components.AddWeld as AddWeld
 # import Components.report_generator as Report
+from GMFL_12_Inch_Desktop.Components.style1 import list_grid_style
 import warnings
 warnings.filterwarnings('ignore')
 websearch = Config.xyz
@@ -89,7 +91,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.gridLayoutWidget.adjustSize()
 
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
-        self.gridLayoutWidget.setStyleSheet(Style.list_grid_style)
+        self.gridLayoutWidget.setStyleSheet(Style1.list_grid_style)
         self.main_left = QtWidgets.QGridLayout(self.gridLayoutWidget)
         self.main_left.setContentsMargins(0, 0, 0, 0)
         self.main_left.setObjectName("main_left")

@@ -47,6 +47,7 @@ from main_gui import GraphApp
 from GMFL_12_Inch_Desktop.Tabs.Data_table_tab_3.tab_ShowData import TabShowData
 from GMFL_12_Inch_Desktop.Tabs.update_tab_1.tab_update import UpdateTab
 from pathlib import Path
+from GMFL_12_Inch_Desktop.Tabs.Line_plot_tab_4.tab_line1 import LinePlotTab
 
 # import Components.report_generator as Report
 import warnings
@@ -306,9 +307,12 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # self.tab_showData.setStyleSheet("background-color: #EDF6FF;")
 
 
-        self.tab_line1 = QtWidgets.QWidget()
-        self.tab_line1.setObjectName("tab_4")
-        self.tab_line1.setStyleSheet("background-color: #EDF6FF;")
+        # self.tab_line1 = QtWidgets.QWidget()
+        # self.tab_line1.setObjectName("tab_4")
+        # self.tab_line1.setStyleSheet("background-color: #EDF6FF;")
+        self.tab_line1 = LinePlotTab(self)
+        self.m_output_proxi = self.tab_line1.m_output_proxi
+
 
         self.tab_line_orientation = QtWidgets.QWidget()
         self.tab_line_orientation.setObjectName("tab_5")
@@ -514,103 +518,108 @@ class Ui_MainWindow(QtWidgets.QWidget):
         # self.tab_showData.layout.addWidget(self.Show_Defect_list)
         # self.tab_showData.setLayout(self.tab_showData.layout)
 
-        """
-        Line Plotting Within the fourth tab
-        """
-        self.hb5 = QtWidgets.QHBoxLayout(self.tab_line1)
-        self.vb5 = QtWidgets.QVBoxLayout()
-        self.figure_x5 = plt.figure(figsize=(25, 8))
-        self.canvas_x5 = FigureCanvas(self.figure_x5)
-        self.toolbar_x5 = NavigationToolbar(self.canvas_x5, self)
-        # self.start = QtWidgets.QLineEdit()
-        # self.end = QtWidgets.QLineEdit()
-        self.combo = QtWidgets.QComboBox()
-        # self.combo.setStyleSheet(Style.btn_type_primary)
-        self.combo.setObjectName("Pipe_id")
-        self.combo.setCurrentText("pipe_id")
-        self.reset_btn = QtWidgets.QPushButton('Reset')
-        self.reset_btn.clicked.connect(self.reset_btn_fun)
+#         """
+#         Line Plotting Within the fourth tab
+#         """
+#         self.hb5 = QtWidgets.QHBoxLayout(self.tab_line1)
+#         self.vb5 = QtWidgets.QVBoxLayout()
+#         self.figure_x5 = plt.figure(figsize=(25, 8))
+#         self.canvas_x5 = FigureCanvas(self.figure_x5)
+#         self.toolbar_x5 = NavigationToolbar(self.canvas_x5, self)
+#         # self.start = QtWidgets.QLineEdit()
+#         # self.end = QtWidgets.QLineEdit()
+#         self.combo = QtWidgets.QComboBox()
+#         # self.combo.setStyleSheet(Style.btn_type_primary)
+#         self.combo.setObjectName("Pipe_id")
+#         self.combo.setCurrentText("pipe_id")
+#         self.reset_btn = QtWidgets.QPushButton('Reset')
+#         self.reset_btn.clicked.connect(self.reset_btn_fun)
+        self.combo = self.tab_line1.combo
+        self.figure_x5 = self.tab_line1.figure_x5
+        self.canvas_x5 = self.tab_line1.canvas_x5
+        self.toolbar_x5 = self.tab_line1.toolbar_x5
 
-
-        self.latitude = QtWidgets.QLineEdit()
-        self.latitude.setFixedWidth(100)
-        self.logitude = QtWidgets.QLineEdit()
-        self.logitude.setFixedWidth(100)
-
-        self.selection_mark_lat_long = QtWidgets.QPushButton()
-        self.selection_mark_lat_long.setText("Mark Lat Long")
-        self.selection_mark_lat_long.clicked.connect(self.mark_lat_long)
-
-
-        self.selection_mark_base_value = QtWidgets.QPushButton()
-        self.selection_mark_base_value.setText("Mark Base Value")
-        self.selection_mark_base_value.clicked.connect(self.basevalue)
-
-
-        self.feature_selection = QtWidgets.QPushButton()
-        self.feature_selection.setText("Mark Feature")
-        self.feature_selection.clicked.connect(self.feature_selection_func)
-
-        self.rect_start_1 = None  # Store the starting point of the rectangle
-        self.rect_end_1 = None
-
-        self.button_x5 = QtWidgets.QPushButton('Line Chart')
-        self.button_x5.clicked.connect(self.Line_chart1)
-
-        # self.button_x5.setStyleSheet(Style.btn_type_primary)
-        self.button_x5.resize(50, 50)
-
-        self.next_btn_lc = QtWidgets.QPushButton('Next')
-        self.next_btn_lc.setStyleSheet("background-color: white; color: black;")
-        self.next_btn_lc.clicked.connect(self.Line_chart1_next)
-
-
-        self.prev_btn_lc = QtWidgets.QPushButton('Previous')
-        self.prev_btn_lc.setStyleSheet("background-color: white; color: black;")
-        self.prev_btn_lc.clicked.connect(self.Line_chart1_previous)
-
-
-        button_layout = QtWidgets.QHBoxLayout()
-        button_layout.addWidget(self.prev_btn_lc)
-        button_layout.addStretch(1)  # Adds a stretchable space between buttons
-        button_layout.addWidget(self.next_btn_lc)
-
-        self.m_output_proxi = QtWebEngineWidgets.QWebEngineView(self)
-
-        self.hb5.addLayout(self.vb5, 75)
-
-        self.hbox_5 = QtWidgets.QHBoxLayout()
-        self.hbox_6 = QtWidgets.QHBoxLayout()
-        self.hbox_7 = QtWidgets.QHBoxLayout()
-
-        self.vb5.addLayout(self.hbox_5)
-        self.vb5.addLayout(self.hbox_6, 60)
-        self.vb5.addLayout(self.hbox_7, 40)
-        self.hbox_7.addWidget(self.m_output_proxi)
-
-        button_layout_widget = QtWidgets.QWidget()
-        # button_layout_widget.setStyleSheet("background-color: white;")
-        button_layout_widget.setLayout(button_layout)
-        self.vb5.addWidget(button_layout_widget)
-
-        self.hbox_5.addWidget(self.toolbar_x5)
-        self.hbox_5.addWidget(self.combo)
-        self.hbox_5.addWidget(self.button_x5)
-
-        self.hbox_5.addWidget(self.latitude)
-        self.hbox_5.addWidget(self.logitude)
-        self.hbox_5.addWidget(self.selection_mark_lat_long)
-        self.hbox_5.addWidget(self.selection_mark_base_value)
-        self.hbox_5.addWidget(self.feature_selection)
-        self.hbox_5.addWidget(self.reset_btn)
-
-        self.hbox_6.addWidget(self.canvas_x5)
-
-        self.setLayout(self.hbox_5)
-
-        """
-------->Here end of fourth tab
-        """
+#
+#
+#         self.latitude = QtWidgets.QLineEdit()
+#         self.latitude.setFixedWidth(100)
+#         self.logitude = QtWidgets.QLineEdit()
+#         self.logitude.setFixedWidth(100)
+#
+#         self.selection_mark_lat_long = QtWidgets.QPushButton()
+#         self.selection_mark_lat_long.setText("Mark Lat Long")
+#         self.selection_mark_lat_long.clicked.connect(self.mark_lat_long)
+#
+#
+#         self.selection_mark_base_value = QtWidgets.QPushButton()
+#         self.selection_mark_base_value.setText("Mark Base Value")
+#         self.selection_mark_base_value.clicked.connect(self.basevalue)
+#
+#
+#         self.feature_selection = QtWidgets.QPushButton()
+#         self.feature_selection.setText("Mark Feature")
+#         self.feature_selection.clicked.connect(self.feature_selection_func)
+#
+#         self.rect_start_1 = None  # Store the starting point of the rectangle
+#         self.rect_end_1 = None
+#
+#         self.button_x5 = QtWidgets.QPushButton('Line Chart')
+#         self.button_x5.clicked.connect(self.Line_chart1)
+#
+#         # self.button_x5.setStyleSheet(Style.btn_type_primary)
+#         self.button_x5.resize(50, 50)
+#
+#         self.next_btn_lc = QtWidgets.QPushButton('Next')
+#         self.next_btn_lc.setStyleSheet("background-color: white; color: black;")
+#         self.next_btn_lc.clicked.connect(self.Line_chart1_next)
+#
+#
+#         self.prev_btn_lc = QtWidgets.QPushButton('Previous')
+#         self.prev_btn_lc.setStyleSheet("background-color: white; color: black;")
+#         self.prev_btn_lc.clicked.connect(self.Line_chart1_previous)
+#
+#
+#         button_layout = QtWidgets.QHBoxLayout()
+#         button_layout.addWidget(self.prev_btn_lc)
+#         button_layout.addStretch(1)  # Adds a stretchable space between buttons
+#         button_layout.addWidget(self.next_btn_lc)
+#
+#         self.m_output_proxi = QtWebEngineWidgets.QWebEngineView(self)
+#
+#         self.hb5.addLayout(self.vb5, 75)
+#
+#         self.hbox_5 = QtWidgets.QHBoxLayout()
+#         self.hbox_6 = QtWidgets.QHBoxLayout()
+#         self.hbox_7 = QtWidgets.QHBoxLayout()
+#
+#         self.vb5.addLayout(self.hbox_5)
+#         self.vb5.addLayout(self.hbox_6, 60)
+#         self.vb5.addLayout(self.hbox_7, 40)
+#         self.hbox_7.addWidget(self.m_output_proxi)
+#
+#         button_layout_widget = QtWidgets.QWidget()
+#         # button_layout_widget.setStyleSheet("background-color: white;")
+#         button_layout_widget.setLayout(button_layout)
+#         self.vb5.addWidget(button_layout_widget)
+#
+#         self.hbox_5.addWidget(self.toolbar_x5)
+#         self.hbox_5.addWidget(self.combo)
+#         self.hbox_5.addWidget(self.button_x5)
+#
+#         self.hbox_5.addWidget(self.latitude)
+#         self.hbox_5.addWidget(self.logitude)
+#         self.hbox_5.addWidget(self.selection_mark_lat_long)
+#         self.hbox_5.addWidget(self.selection_mark_base_value)
+#         self.hbox_5.addWidget(self.feature_selection)
+#         self.hbox_5.addWidget(self.reset_btn)
+#
+#         self.hbox_6.addWidget(self.canvas_x5)
+#
+#         self.setLayout(self.hbox_5)
+#
+#         """
+# ------->Here end of fourth tab
+#         """
 
 
         """
@@ -1057,7 +1066,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.tab_showData = TabShowData(self)
         self.right_tabWidget.addTab(self.tab_weld_selection, "")
         self.right_tabWidget.addTab(self.tab_showData, "")
-        self.right_tabWidget.addTab(self.tab_line1, "")
+        self.right_tabWidget.addTab(self.tab_line1.tab_line1, "")
         self.right_tabWidget.addTab(self.tab_line_orientation, "")
         self.right_tabWidget.addTab(self.tab_visualize, "")
         self.right_tabWidget.addTab(self.continue_heatmap_tab, "")
@@ -1106,7 +1115,7 @@ class Ui_MainWindow(QtWidgets.QWidget):
         self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_update), "🔄 Update")
         self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_weld_selection), "⚙️ Weld Selection")
         self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_showData), "📊 Data Table")
-        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line1),
+        self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line1.tab_line1),
                                         "📈Line Plot(Counter vs Sensor)")
         self.right_tabWidget.setTabText(self.right_tabWidget.indexOf(self.tab_line_orientation),
                                         "Line Plot(Absolute vs Orientation)")
@@ -1297,174 +1306,129 @@ class Ui_MainWindow(QtWidgets.QWidget):
             self.combo.setCurrentIndex(current_index - 1)
             self.Line_chart1()
 
-    def Line_chart1(self):
-        runid = self.runid
-        weld_id = self.combo.currentText()
-        self.weld_id = int(weld_id)
-        p = self.project_name
-        print(p)
-        with connection.cursor() as cursor:
-            # query = "SELECT start_index,end_index FROM pipes where runid=" + str(runid) + " and id=" + str(pipe_id)
-            query = "SELECT start_index, end_index,start_oddo1,end_oddo1 FROM welds WHERE runid=%s AND id IN (%s, (SELECT MAX(id) FROM welds WHERE runid=%s AND id < %s)) ORDER BY id"
-
-            cursor.execute(query, (self.runid, self.weld_id, self.runid, self.weld_id))
-            result = cursor.fetchall()
-            if result:
-                path = Config.weld_pipe_pkl + self.project_name + '/' + str(weld_id) + '.pkl'
-                print(path)
-                if os.path.isfile(path):
-                    Config.print_with_time("File exist")
-                    df_pipe = pd.read_pickle(path)
-                    #print(self.df_pipe)
-
-                    self.plot_linechart_sensor(df_pipe)
-
-                else:
-                    folder_path = Config.weld_pipe_pkl + self.project_name
-                    print(folder_path)
-                    Config.print_with_time("File not exist")
-                    try:
-                        os.makedirs(folder_path)
-
-                    except:
-                        Config.print_with_time("Folder already exists")
-                    start_index, end_index = result[0][0], result[1][1]
-                    print("start index and end index", start_index, end_index)
-                    Config.print_with_time("Start fetching at : ")
-
-                    # query_for_start = 'SELECT * FROM ' + Config.table_name + ' WHERE index>{} AND index<{} order by index'
-                    # query_job = client.query(query_for_start.format(start_index, end_index))
-                    # self.df_pipe = query_job.result().to_dataframe()
-                    # Config.print_with_time("conversion to data frame is done")
-                    # self.df_pipe.to_pickle(path)
-                    # Config.print_with_time("successfully  saved to pickle")
-                    # # index = self.df_pipe['index']
-                    # self.index = self.df_pipe['index']
-                    # oddo1 = (self.df_pipe['ODDO1'] - Config.oddo1) / 1000
-                    # # print("index....", index)
-                    # self.figure_x5.clear()
-                    # self.ax5 = self.figure_x5.add_subplot(111)
-
-                    """
-                    New Code
-                    """
-                    # start = time.time()
-                    # print("start", start)
-                    # executor = ThreadPoolExecutor(16)
-                    #
-                    # # start_index = 234637
-                    # # end_index = 275019
-                    # k = []
-                    # while start_index < end_index:
-                    #     k.append([start_index + 1, start_index + 2000])
-                    #     start_index = start_index + 2000
-                    # k1 = k[-1]
-                    # del k[-1]
-                    # k.append([k1[0], end_index])
-                    # future = []
-                    # for t in range(len(k)):
-                    #     a = k[t]
-                    #     future.append(executor.submit(func, [a[0], a[1]]))
-                    # d1 = []
-                    # for x in future:
-                    #     df = x.result()
-                    #     d1.append(df)
-                    #
-                    # df_pipe = pd.concat(d1)
-                    # df_pipe.reset_index(inplace=True)
-                    # # print("Plotted data", df_pipe)
-                    # df_pipe.to_pickle(folder_path + '/' + str(weld_id) + '.pkl')
-                    # Config.print_with_time("Succesfully saved to pickle file")
-
-                    query_for_start = 'SELECT index,ROLL,ODDO1,ODDO2,[F1H1, F1H2, F1H3, F1H4, F2H1, F2H2, F2H3, F2H4,F3H1, F3H2, F3H3, F3H4, F4H1, F4H2, F4H3,F4H4, F5H1, F5H2, F5H3, F5H4, F6H1, F6H2, F6H3, F6H4,F7H1, F7H2, F7H3, F7H4, F8H1, F8H2, F8H3, F8H4, F9H1, F9H2, F9H3, F9H4, F10H1,F10H2, F10H3, F10H4,F11H1, F11H2, F11H3, F11H4, F12H1, F12H2, F12H3, F12H4, F13H1, F13H2, F13H3,F13H4, F14H1, F14H2, F14H3, F14H4,F15H1, F15H2, F15H3, F15H4, F16H1, F16H2, F16H3, F16H4, F17H1, F17H2, F17H3,F17H4, F18H1, F18H2, F18H3, F18H4,F19H1, F19H2, F19H3, F19H4, F20H1, F20H2, F20H3, F20H4, F21H1, F21H2, F21H3,F21H4, F22H1, F22H2, F22H3, F22H4,F23H1, F23H2, F23H3, F23H4, F24H1, F24H2, F24H3, F24H4, F25H1, F25H2, F25H3, F25H4, F26H1, F26H2, F26H3, F26H4, F27H1, F27H2, F27H3, F27H4, F28H1, F28H2, F28H3, F28H4,F29H1, F29H2, F29H3, F29H4, F30H1, F30H2, F30H3, F30H4, F31H1, F31H2, F31H3, F31H4, F32H1, F32H2, F32H3, F32H4, F33H1,F33H2, F33H3, F33H4, F34H1, F34H2, F34H3, F34H4, F35H1, F35H2, F35H3, F35H4, F36H1, F36H2, F36H3, F36H4],PITCH,YAW FROM ' + Config.table_name + ' WHERE index>{} AND index<{} order by index'
-                    query_job = client.query(query_for_start.format(start_index, end_index))
-                    results = query_job.result()
-
-                    data = []
-                    index_t4 = []
-                    oddo_1 = []
-                    oddo_2 = []
-                    # indexes = []
-                    roll1 = []
-                    pitch1 = []
-                    yaw1 = []
-
-                    for row in results:
-                        index_t4.append(row[0])
-                        roll1.append(row[1])
-                        oddo_1.append(row[2])
-                        oddo_2.append(row[3])
-                        data.append(row[4])
-                        pitch1.append(row[5])
-                        yaw1.append(row[6])
-                        """
-                        Swapping the Pitch data to Roll data
-                        """
-
-                    oddo1_t4 = []
-                    oddo2_t4 = []
-                    roll_t4 = []
-                    pitch_t4 = []
-                    yaw_t4 = []
-
-                    """
-                    Reference value will be consider
-                    """
-                    for odometer1 in oddo_1:
-                        od1 = odometer1 - Config.oddo1  ###16984.2 change According to run
-                        oddo1_t4.append(od1)
-                    for odometer2 in oddo_2:
-                        od2 = odometer2 - Config.oddo2  ###17690.36 change According to run
-                        oddo2_t4.append(od2)
-
-                    """
-                    Reference value will be consider
-                    """
-                    for roll2 in roll1:
-                        roll3 = roll2 - Config.roll_value
-                        roll_t4.append(roll3)
-
-                    for pitch2 in pitch1:
-                        pitch3 = pitch2 - Config.pitch_value
-                        pitch_t4.append(pitch3)
-
-                    for yaw2 in yaw1:
-                        yaw3 = yaw2 - Config.yaw_value
-                        yaw_t4.append(yaw3)
-
-                    query_for_start = 'SELECT index,[F1P1, F2P2, F3P3, F4P4, F5P1, F6P2, F7P3, F8P4, F9P1, F10P2, F11P3, F12P4, F13P1, F14P2, F15P3, F16P4, F17P1, F18P2, F19P3, F20P4, F21P1, F22P2, F23P3, F24P4, F25P1, F26P2, F27P3, F28P4, F29P1, F30P2, F31P3, F32P4, F33P1, F34P2, F35P3, F36P4] FROM ' + Config.table_name + ' WHERE index>{} AND index<{} order by index'
-                    query_job = client.query(query_for_start.format(start_index, end_index))
-                    results_1 = query_job.result()
-                    data1 = []
-                    index_lc = []
-                    for row1 in results_1:
-                        index_lc.append(row1[0])
-                        data1.append(row1[1])
-
-                    df_new_proximity_lc = pd.DataFrame(data1, columns=['F1P1', 'F2P2', 'F3P3', 'F4P4', 'F5P1', 'F6P2', 'F7P3', 'F8P4',
-                                                                        'F9P1', 'F10P2', 'F11P3', 'F12P4', 'F13P1', 'F14P2', 'F15P3',
-                                                                         'F16P4', 'F17P1', 'F18P2', 'F19P3', 'F20P4', 'F21P1', 'F22P2',
-                                                                         'F23P3', 'F24P4', 'F25P1', 'F26P2', 'F27P3', 'F28P4', 'F29P1',
-                                                                         'F30P2', 'F31P3', 'F32P4', 'F33P1', 'F34P2', 'F35P3', 'F36P4'])
-
-                    df_new_t4 = pd.DataFrame(data, columns=[f'F{i}H{j}' for i in range(1, 37) for j in range(1, 5)])
-
-                    df_elem = pd.DataFrame({"index": index_t4, "ODDO1": oddo_1, "ROLL": roll_t4, "PITCH": pitch_t4, "YAW": yaw_t4})
-                    frames = [df_elem, df_new_t4]
-                    df_pipe = pd.concat(frames, axis=1, join='inner')
-
-                    for col in df_new_proximity_lc.columns:
-                        df_pipe[col] = df_new_proximity_lc[col]
-
-                    # df_new.reset_index(inplace=True)
-                    # print("Plotted data", df_pipe)
-                    df_pipe.to_pickle(folder_path + '/' + str(weld_id) + '.pkl')
-                    Config.print_with_time("Succesfully saved to pickle file")
-                    Config.print_with_time("End fetching  at : ")
-
-                    self.plot_linechart_sensor(df_pipe)
-            else:
-                Config.print_with_time("No data found for this pipe ID : ")
+    # def Line_chart1(self):
+    #     runid = self.runid
+    #     weld_id = self.combo.currentText()
+    #     self.weld_id = int(weld_id)
+    #     p = self.project_name
+    #     print(p)
+    #     with connection.cursor() as cursor:
+    #         # query = "SELECT start_index,end_index FROM pipes where runid=" + str(runid) + " and id=" + str(pipe_id)
+    #         query = "SELECT start_index, end_index,start_oddo1,end_oddo1 FROM welds WHERE runid=%s AND id IN (%s, (SELECT MAX(id) FROM welds WHERE runid=%s AND id < %s)) ORDER BY id"
+    #
+    #         cursor.execute(query, (self.runid, self.weld_id, self.runid, self.weld_id))
+    #         result = cursor.fetchall()
+    #         if result:
+    #             path = Config.weld_pipe_pkl + self.project_name + '/' + str(weld_id) + '.pkl'
+    #             print(path)
+    #             if os.path.isfile(path):
+    #                 Config.print_with_time("File exist")
+    #                 df_pipe = pd.read_pickle(path)
+    #                 #print(self.df_pipe)
+    #
+    #                 self.plot_linechart_sensor(df_pipe)
+    #
+    #             else:
+    #                 folder_path = Config.weld_pipe_pkl + self.project_name
+    #                 print(folder_path)
+    #                 Config.print_with_time("File not exist")
+    #                 try:
+    #                     os.makedirs(folder_path)
+    #
+    #                 except:
+    #                     Config.print_with_time("Folder already exists")
+    #                 start_index, end_index = result[0][0], result[1][1]
+    #                 print("start index and end index", start_index, end_index)
+    #                 Config.print_with_time("Start fetching at : ")
+    #                 query_for_start = 'SELECT index,ROLL,ODDO1,ODDO2,[F1H1, F1H2, F1H3, F1H4, F2H1, F2H2, F2H3, F2H4,F3H1, F3H2, F3H3, F3H4, F4H1, F4H2, F4H3,F4H4, F5H1, F5H2, F5H3, F5H4, F6H1, F6H2, F6H3, F6H4,F7H1, F7H2, F7H3, F7H4, F8H1, F8H2, F8H3, F8H4, F9H1, F9H2, F9H3, F9H4, F10H1,F10H2, F10H3, F10H4,F11H1, F11H2, F11H3, F11H4, F12H1, F12H2, F12H3, F12H4, F13H1, F13H2, F13H3,F13H4, F14H1, F14H2, F14H3, F14H4,F15H1, F15H2, F15H3, F15H4, F16H1, F16H2, F16H3, F16H4, F17H1, F17H2, F17H3,F17H4, F18H1, F18H2, F18H3, F18H4,F19H1, F19H2, F19H3, F19H4, F20H1, F20H2, F20H3, F20H4, F21H1, F21H2, F21H3,F21H4, F22H1, F22H2, F22H3, F22H4,F23H1, F23H2, F23H3, F23H4, F24H1, F24H2, F24H3, F24H4, F25H1, F25H2, F25H3, F25H4, F26H1, F26H2, F26H3, F26H4, F27H1, F27H2, F27H3, F27H4, F28H1, F28H2, F28H3, F28H4,F29H1, F29H2, F29H3, F29H4, F30H1, F30H2, F30H3, F30H4, F31H1, F31H2, F31H3, F31H4, F32H1, F32H2, F32H3, F32H4, F33H1,F33H2, F33H3, F33H4, F34H1, F34H2, F34H3, F34H4, F35H1, F35H2, F35H3, F35H4, F36H1, F36H2, F36H3, F36H4],PITCH,YAW FROM ' + Config.table_name + ' WHERE index>{} AND index<{} order by index'
+    #                 query_job = client.query(query_for_start.format(start_index, end_index))
+    #                 results = query_job.result()
+    #
+    #                 data = []
+    #                 index_t4 = []
+    #                 oddo_1 = []
+    #                 oddo_2 = []
+    #                 # indexes = []
+    #                 roll1 = []
+    #                 pitch1 = []
+    #                 yaw1 = []
+    #
+    #                 for row in results:
+    #                     index_t4.append(row[0])
+    #                     roll1.append(row[1])
+    #                     oddo_1.append(row[2])
+    #                     oddo_2.append(row[3])
+    #                     data.append(row[4])
+    #                     pitch1.append(row[5])
+    #                     yaw1.append(row[6])
+    #                     """
+    #                     Swapping the Pitch data to Roll data
+    #                     """
+    #
+    #                 oddo1_t4 = []
+    #                 oddo2_t4 = []
+    #                 roll_t4 = []
+    #                 pitch_t4 = []
+    #                 yaw_t4 = []
+    #
+    #                 """
+    #                 Reference value will be consider
+    #                 """
+    #                 for odometer1 in oddo_1:
+    #                     od1 = odometer1 - Config.oddo1  ###16984.2 change According to run
+    #                     oddo1_t4.append(od1)
+    #                 for odometer2 in oddo_2:
+    #                     od2 = odometer2 - Config.oddo2  ###17690.36 change According to run
+    #                     oddo2_t4.append(od2)
+    #
+    #                 """
+    #                 Reference value will be consider
+    #                 """
+    #                 for roll2 in roll1:
+    #                     roll3 = roll2 - Config.roll_value
+    #                     roll_t4.append(roll3)
+    #
+    #                 for pitch2 in pitch1:
+    #                     pitch3 = pitch2 - Config.pitch_value
+    #                     pitch_t4.append(pitch3)
+    #
+    #                 for yaw2 in yaw1:
+    #                     yaw3 = yaw2 - Config.yaw_value
+    #                     yaw_t4.append(yaw3)
+    #
+    #                 query_for_start = 'SELECT index,[F1P1, F2P2, F3P3, F4P4, F5P1, F6P2, F7P3, F8P4, F9P1, F10P2, F11P3, F12P4, F13P1, F14P2, F15P3, F16P4, F17P1, F18P2, F19P3, F20P4, F21P1, F22P2, F23P3, F24P4, F25P1, F26P2, F27P3, F28P4, F29P1, F30P2, F31P3, F32P4, F33P1, F34P2, F35P3, F36P4] FROM ' + Config.table_name + ' WHERE index>{} AND index<{} order by index'
+    #                 query_job = client.query(query_for_start.format(start_index, end_index))
+    #                 results_1 = query_job.result()
+    #                 data1 = []
+    #                 index_lc = []
+    #                 for row1 in results_1:
+    #                     index_lc.append(row1[0])
+    #                     data1.append(row1[1])
+    #
+    #                 df_new_proximity_lc = pd.DataFrame(data1, columns=['F1P1', 'F2P2', 'F3P3', 'F4P4', 'F5P1', 'F6P2', 'F7P3', 'F8P4',
+    #                                                                     'F9P1', 'F10P2', 'F11P3', 'F12P4', 'F13P1', 'F14P2', 'F15P3',
+    #                                                                      'F16P4', 'F17P1', 'F18P2', 'F19P3', 'F20P4', 'F21P1', 'F22P2',
+    #                                                                      'F23P3', 'F24P4', 'F25P1', 'F26P2', 'F27P3', 'F28P4', 'F29P1',
+    #                                                                      'F30P2', 'F31P3', 'F32P4', 'F33P1', 'F34P2', 'F35P3', 'F36P4'])
+    #
+    #                 df_new_t4 = pd.DataFrame(data, columns=[f'F{i}H{j}' for i in range(1, 37) for j in range(1, 5)])
+    #
+    #                 df_elem = pd.DataFrame({"index": index_t4, "ODDO1": oddo_1, "ROLL": roll_t4, "PITCH": pitch_t4, "YAW": yaw_t4})
+    #                 frames = [df_elem, df_new_t4]
+    #                 df_pipe = pd.concat(frames, axis=1, join='inner')
+    #
+    #                 for col in df_new_proximity_lc.columns:
+    #                     df_pipe[col] = df_new_proximity_lc[col]
+    #
+    #                 # df_new.reset_index(inplace=True)
+    #                 # print("Plotted data", df_pipe)
+    #                 df_pipe.to_pickle(folder_path + '/' + str(weld_id) + '.pkl')
+    #                 Config.print_with_time("Succesfully saved to pickle file")
+    #                 Config.print_with_time("End fetching  at : ")
+    #
+    #                 self.plot_linechart_sensor(df_pipe)
+    #         else:
+    #             Config.print_with_time("No data found for this pipe ID : ")
 
     def plot_linechart_sensor(self, df_pipe):
         print("hi sensor linechart")
@@ -1661,56 +1625,56 @@ class Ui_MainWindow(QtWidgets.QWidget):
         rs1 = RectangleSelector(self.figure_x5.gca(), self.line_selection5, useblit=True)
         plt.connect('key_press_event', rs1)
 
-    def mark_lat_long(self):
-        if self.rect_start_1 is not None and self.rect_end_1 is not None:
-            x1, y1 = min(self.rect_start_1[0], self.rect_end_1[0]), \
-                     min(self.rect_start_1[1], self.rect_end_1[1])
-            x2, y2 = x1 + abs(self.rect_end_1[0] - self.rect_start_1[0]), \
-                     y1 + abs(self.rect_end_1[1] - self.rect_start_1[1])
-            lat_mark = self.latitude.text().strip()
-            long_mark = self.logitude.text().strip()
-
-            if lat_mark and long_mark:
-                index = self.index
-                start_index = index.iloc[int(self.rect_start_1[0])]
-                end_index = index.iloc[int(self.rect_end_1[0])]
-                runid = self.runid
-                weld_id = self.weld_id
-                print(runid, weld_id)
-                print(start_index, end_index)
-                query_for_start = 'SELECT * FROM ' + Config.table_name + ' WHERE index={}'
-                query_job = client.query(query_for_start.format(start_index))
-                results_1 = query_job.result()
-                oddo1 = []
-                oddo2 = []
-                for row1 in results_1:
-                    oddo1.append(row1['ODDO1'])
-                    oddo2.append(row1['ODDO2'])
-                """
-                    Change oddo1 and oddo2 distance according to reference
-                """
-                oddo1 = oddo1[0] - Config.oddo1
-                oddo2 = oddo2[0] - Config.oddo2
-                print(oddo1, oddo2)
-                with connection.cursor() as cursor:
-                    same_lw_up_check = cursor.execute(
-                        'SELECT absolute_distance_oddo1,absolute_distance_oddo2 FROM dgps_segment where absolute_distance_oddo1="' + str(
-                            oddo1) + '" and absolute_distance_oddo2="' + str(oddo2) + '"')
-                    if same_lw_up_check:
-                        return 'HII'
-                    else:
-                        query_pipe_insert = "INSERT INTO dgps_segment (runid, pipe_id, start_index, absolute_distance_oddo2,absolute_distance_oddo1,Latitude,Logitude) VALUE(%s,%s,%s,%s,%s,%s,%s) "
-
-                        # Execute query.
-                        cursor.execute(query_pipe_insert,
-                                       (int(runid), int(weld_id), int(start_index), oddo2, oddo1, lat_mark, long_mark))
-                        connection.commit()
-                QMessageBox.information(self, 'Success', 'Data saved')
-            else:
-                QMessageBox.warning(self, 'Invalid Input', 'Enter any value')
-        else:
-            QMessageBox.warning(self, 'Invalid Input',
-                                'Select RectangleSelection of Marking, then press the button for Lat And Long')
+    # def mark_lat_long(self):
+    #     if self.rect_start_1 is not None and self.rect_end_1 is not None:
+    #         x1, y1 = min(self.rect_start_1[0], self.rect_end_1[0]), \
+    #                  min(self.rect_start_1[1], self.rect_end_1[1])
+    #         x2, y2 = x1 + abs(self.rect_end_1[0] - self.rect_start_1[0]), \
+    #                  y1 + abs(self.rect_end_1[1] - self.rect_start_1[1])
+    #         lat_mark = self.latitude.text().strip()
+    #         long_mark = self.logitude.text().strip()
+    #
+    #         if lat_mark and long_mark:
+    #             index = self.index
+    #             start_index = index.iloc[int(self.rect_start_1[0])]
+    #             end_index = index.iloc[int(self.rect_end_1[0])]
+    #             runid = self.runid
+    #             weld_id = self.weld_id
+    #             print(runid, weld_id)
+    #             print(start_index, end_index)
+    #             query_for_start = 'SELECT * FROM ' + Config.table_name + ' WHERE index={}'
+    #             query_job = client.query(query_for_start.format(start_index))
+    #             results_1 = query_job.result()
+    #             oddo1 = []
+    #             oddo2 = []
+    #             for row1 in results_1:
+    #                 oddo1.append(row1['ODDO1'])
+    #                 oddo2.append(row1['ODDO2'])
+    #             """
+    #                 Change oddo1 and oddo2 distance according to reference
+    #             """
+    #             oddo1 = oddo1[0] - Config.oddo1
+    #             oddo2 = oddo2[0] - Config.oddo2
+    #             print(oddo1, oddo2)
+    #             with connection.cursor() as cursor:
+    #                 same_lw_up_check = cursor.execute(
+    #                     'SELECT absolute_distance_oddo1,absolute_distance_oddo2 FROM dgps_segment where absolute_distance_oddo1="' + str(
+    #                         oddo1) + '" and absolute_distance_oddo2="' + str(oddo2) + '"')
+    #                 if same_lw_up_check:
+    #                     return 'HII'
+    #                 else:
+    #                     query_pipe_insert = "INSERT INTO dgps_segment (runid, pipe_id, start_index, absolute_distance_oddo2,absolute_distance_oddo1,Latitude,Longitude) VALUE(%s,%s,%s,%s,%s,%s,%s) "
+    #
+    #                     # Execute query.
+    #                     cursor.execute(query_pipe_insert,
+    #                                    (int(runid), int(weld_id), int(start_index), oddo2, oddo1, lat_mark, long_mark))
+    #                     connection.commit()
+    #             QMessageBox.information(self, 'Success', 'Data saved')
+    #         else:
+    #             QMessageBox.warning(self, 'Invalid Input', 'Enter any value')
+    #     else:
+    #         QMessageBox.warning(self, 'Invalid Input',
+    #                             'Select RectangleSelection of Marking, then press the button for Lat And Long')
 
     """
     This function we are using to mean of each sensor its depends on Pipe
